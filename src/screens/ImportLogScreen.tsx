@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react'
 import { DataAccessGate } from './DataAccessGate'
+import { importStatusLabel } from './importStatusLabels'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { ImportLog } from '../core/dao/importLogDao'
-
-const statusLabel: Record<ImportLog['status'], string> = {
-  RUNNING: '実行中',
-  COMPLETED: '全件成功',
-  COMPLETED_WITH_ERRORS: '一部エラーあり',
-  FAILED: '処理失敗',
-}
 
 // SCR-3: 取込バッチ単位の実行ログを一覧表示し、選択した1件のエラー明細を確認する画面（DO-9）。
 export function ImportLogScreen() {
@@ -44,7 +38,13 @@ function ImportLogScreenBody({ access }: { access: MasterDataAccess }) {
       <button type="button" onClick={refresh} disabled={isLoading}>
         更新
       </button>
-      <p>{isLoading ? '読み込み中…' : `${logs.length}件`}</p>
+      <p>
+        {isLoading
+          ? '読み込み中…'
+          : logs.length === 0
+            ? 'まだ取込ログはありません。CSV取込画面から取込を実行してください。'
+            : `${logs.length}件`}
+      </p>
 
       <table>
         <thead>
@@ -63,13 +63,13 @@ function ImportLogScreenBody({ access }: { access: MasterDataAccess }) {
               <td>{log.startedAt}</td>
               <td>{tableNameOf(log.tableId)}</td>
               <td>{log.fileName}</td>
-              <td>{statusLabel[log.status]}</td>
+              <td>{importStatusLabel[log.status]}</td>
               <td>
                 {log.successRows}/{log.errorRows}/{log.totalRows}
               </td>
               <td>
                 <button type="button" onClick={() => setSelectedImportId(log.importId)}>
-                  エラー明細を見る
+                  詳細を見る
                 </button>
               </td>
             </tr>
@@ -80,7 +80,7 @@ function ImportLogScreenBody({ access }: { access: MasterDataAccess }) {
       {selectedLog && (
         <div>
           <h3>
-            エラー明細: {selectedLog.fileName}（{tableNameOf(selectedLog.tableId)}）
+            取込詳細: {selectedLog.fileName}（{tableNameOf(selectedLog.tableId)}）
           </h3>
           {selectedLog.errors.length === 0 ? (
             <p>エラーはありません。</p>

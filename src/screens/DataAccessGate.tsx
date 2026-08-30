@@ -17,14 +17,24 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
   }
 
   if (state.status === 'error') {
-    return <p role="alert">アプリの初期化に失敗しました: {state.message}</p>
+    return (
+      <div role="alert">
+        <p>アプリの初期化に失敗しました: {state.message}</p>
+        <button type="button" onClick={() => window.location.reload()}>
+          再読み込み
+        </button>
+      </div>
+    )
   }
 
   return (
     <>
       {state.definitionErrors.length > 0 && (
         <div role="alert" className="definition-error-banner">
-          <p>一部のテーブル定義にエラーがあるため読み込めませんでした（定義JSONを確認してください）:</p>
+          <p>
+            一部のテーブル定義にエラーがあるため読み込めませんでした（定義JSONを確認してください）。
+            該当テーブルは取込・検索・出力画面の選択肢に表示されません:
+          </p>
           <ul>
             {state.definitionErrors.map((error, index) => (
               <li key={index}>

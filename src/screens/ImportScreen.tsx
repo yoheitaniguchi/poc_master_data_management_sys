@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DataAccessGate } from './DataAccessGate'
+import { importStatusLabel } from './importStatusLabels'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { ImportLog } from '../core/dao/importLogDao'
 import type { TableDefinition } from '../core/schema/types'
@@ -59,12 +60,15 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null)
 
   const definition = access.definitions.find((d) => d.tableId === tableId)
+  const primaryKeyColumn = definition?.columns.find((column) => column.primaryKey)
 
   async function handleImport() {
     if (!definition || !file) return
     if (
       !window.confirm(
-        `「${definition.tableName}」にCSVを取り込みます。主キーが一致する既存データは上書きされます。実行しますか？`,
+        `「${definition.tableName}」にCSVを取り込みます。\n` +
+          `主キー「${primaryKeyColumn?.columnName ?? ''}」が一致する既存データは上書きされ、この操作は元に戻せません。\n` +
+          `実行しますか？`,
       )
     ) {
       return
@@ -92,6 +96,7 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
             value={tableId}
             onChange={(event) => {
               setTableId(event.target.value)
+              setFile(null)
               setOutcome(null)
             }}
             disabled={isRunning}
@@ -103,6 +108,11 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
             ))}
           </select>
         </label>
+        {definition && (
+          <p>
+            想定するCSVヘッダー（1行目）: {definition.columns.map((c) => c.columnId).join(',')}
+          </p>
+        )}
       </div>
 
       <div>
@@ -134,16 +144,9 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
 }
 
 function ImportResultSummary({ log }: { log: ImportLog }) {
-  const statusLabel: Record<ImportLog['status'], string> = {
-    RUNNING: '実行中',
-    COMPLETED: '全件成功',
-    COMPLETED_WITH_ERRORS: '一部エラーあり',
-    FAILED: '処理失敗',
-  }
-
   return (
     <div role="status">
-      <h3>取込結果: {statusLabel[log.status]}</h3>
+      <h3>取込結果: {importStatusLabel[log.status]}</h3>
       <ul>
         <li>対象ファイル: {log.fileName}</li>
         <li>件数: 合計{log.totalRows}件 / 成功{log.successRows}件 / エラー{log.errorRows}件</li>

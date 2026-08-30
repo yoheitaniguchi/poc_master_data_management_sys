@@ -50,7 +50,7 @@ afterEach(async () => {
 
 describe('openMasterDb', () => {
   it('テーブル定義ごとにprimaryKeyをkeyPathとするオブジェクトストアとimport_logsストアを作成する', async () => {
-    const db = await openMasterDb([itemDef, partnerDef], { storage: createMemoryStorage() })
+    const { db } = await openMasterDb([itemDef, partnerDef], { storage: createMemoryStorage() })
 
     expect(Array.from(db.objectStoreNames).sort()).toEqual(
       ['import_logs', 'm_item', 'm_partner'].sort(),
@@ -62,25 +62,33 @@ describe('openMasterDb', () => {
     db.close()
   })
 
-  it('定義ハッシュが変わらない再起動では既存データを保持する', async () => {
+  it('初回起動（保存済みハッシュなし）はrebuilt=trueを返す', async () => {
+    const { rebuilt, db } = await openMasterDb([itemDef], { storage: createMemoryStorage() })
+    expect(rebuilt).toBe(true)
+    db.close()
+  })
+
+  it('定義ハッシュが変わらない再起動では既存データを保持し、rebuilt=falseを返す', async () => {
     const storage = createMemoryStorage()
-    const db1 = await openMasterDb([itemDef], { storage })
+    const { db: db1 } = await openMasterDb([itemDef], { storage })
     await db1.put('m_item', { item_code: 'A001', item_name: 'テスト品目' })
     db1.close()
 
-    const db2 = await openMasterDb([itemDef], { storage })
+    const { db: db2, rebuilt } = await openMasterDb([itemDef], { storage })
+    expect(rebuilt).toBe(false)
     const record = await db2.get('m_item', 'A001')
     expect(record).toEqual({ item_code: 'A001', item_name: 'テスト品目' })
     db2.close()
   })
 
-  it('定義ハッシュが変わる再起動では既存データを削除して再作成する（docs/design.md §4.3）', async () => {
+  it('定義ハッシュが変わる再起動では既存データを削除して再作成し、rebuilt=trueを返す（docs/design.md §4.3）', async () => {
     const storage = createMemoryStorage()
-    const db1 = await openMasterDb([itemDef], { storage })
+    const { db: db1 } = await openMasterDb([itemDef], { storage })
     await db1.put('m_item', { item_code: 'A001', item_name: 'テスト品目' })
     db1.close()
 
-    const db2 = await openMasterDb([itemDef, partnerDef], { storage })
+    const { db: db2, rebuilt } = await openMasterDb([itemDef, partnerDef], { storage })
+    expect(rebuilt).toBe(true)
     expect(Array.from(db2.objectStoreNames).sort()).toEqual(
       ['import_logs', 'm_item', 'm_partner'].sort(),
     )
@@ -91,7 +99,7 @@ describe('openMasterDb', () => {
 
   it('テーブル構成は同じでもmaxLength等の値のみが変わればデータを削除して再作成する（EFFECT-2）', async () => {
     const storage = createMemoryStorage()
-    const db1 = await openMasterDb([itemDef], { storage })
+    const { db: db1 } = await openMasterDb([itemDef], { storage })
     await db1.put('m_item', { item_code: 'A001', item_name: 'テスト品目' })
     db1.close()
 
@@ -99,7 +107,8 @@ describe('openMasterDb', () => {
       ...itemDef,
       columns: [itemDef.columns[0], { ...itemDef.columns[1], maxLength: 200 }],
     }
-    const db2 = await openMasterDb([itemDefWithWiderMaxLength], { storage })
+    const { db: db2, rebuilt } = await openMasterDb([itemDefWithWiderMaxLength], { storage })
+    expect(rebuilt).toBe(true)
     const record = await db2.get('m_item', 'A001')
     expect(record).toBeUndefined()
     db2.close()

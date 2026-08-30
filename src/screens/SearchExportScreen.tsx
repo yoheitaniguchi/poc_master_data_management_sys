@@ -5,7 +5,6 @@ import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { MasterRecord, MasterRecordValue, TableDefinition } from '../core/schema/types'
 
 function parseSearchValue(dataType: TableDefinition['columns'][number]['dataType'], raw: string): MasterRecordValue | undefined {
-  if (raw === '') return undefined
   switch (dataType) {
     case 'string':
     case 'date':
@@ -21,8 +20,11 @@ function parseSearchValue(dataType: TableDefinition['columns'][number]['dataType
   }
 }
 
+// docs/design.md §4.7: CSV取込のヘッダーはcolumnId厳密一致を前提とするため、DO-7のダウンロード
+// もcolumnIdをヘッダーに使う（ダウンロードしたCSVをそのまま取込画面へ再投入できるようにする）。
+// 画面上の一覧表示（<th>）は人間向けにcolumnNameを使うが、ファイル出力は往復可能な形式を優先する。
 function downloadCsv(fileName: string, definition: TableDefinition, records: MasterRecord[]) {
-  const headerRow = definition.columns.map((column) => column.columnName)
+  const headerRow = definition.columns.map((column) => column.columnId)
   const dataRows = records.map((record) => definition.columns.map((column) => record[column.columnId] ?? ''))
   const csvBody = Papa.unparse([headerRow, ...dataRows])
   // Excelで文字化けしないようUTF-8 BOMを付与する
@@ -45,12 +47,14 @@ function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
   const [searchInputs, setSearchInputs] = useState<Record<string, string>>({})
   const [records, setRecords] = useState<MasterRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [ignoredColumnNames, setIgnoredColumnNames] = useState<string[]>([])
 
   const definition = access.definitions.find((d) => d.tableId === tableId)
   const dao = definition ? access.daos.get(definition.tableId) : undefined
 
   useEffect(() => {
     setSearchInputs({})
+    setIgnoredColumnNames([])
     if (!dao) {
       setRecords([])
       return
@@ -65,12 +69,19 @@ function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
   async function handleSearch() {
     if (!dao || !definition) return
     const criteria: Partial<MasterRecord> = {}
+    const ignored: string[] = []
     for (const column of definition.columns) {
-      const value = parseSearchValue(column.dataType, searchInputs[column.columnId] ?? '')
-      if (value !== undefined) {
-        criteria[column.columnId] = value
+      const raw = searchInputs[column.columnId] ?? ''
+      if (raw === '') continue
+      const value = parseSearchValue(column.dataType, raw)
+      if (value === undefined) {
+        // 数値/真偽値に変換できない入力（例: 数値カラムに文字列）はこの条件のみ無視して検索を続ける
+        ignored.push(column.columnName)
+        continue
       }
+      criteria[column.columnId] = value
     }
+    setIgnoredColumnNames(ignored)
     setIsLoading(true)
     try {
       setRecords(await dao.search(criteria))
@@ -81,6 +92,7 @@ function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
 
   async function handleClear() {
     setSearchInputs({})
+    setIgnoredColumnNames([])
     if (!dao) return
     setIsLoading(true)
     try {
@@ -101,7 +113,11 @@ function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
       <div>
         <label>
           テーブル:{' '}
-          <select value={tableId} onChange={(event) => setTableId(event.target.value)}>
+          <select
+            value={tableId}
+            onChange={(event) => setTableId(event.target.value)}
+            disabled={isLoading}
+          >
             {access.definitions.map((d) => (
               <option key={d.tableId} value={d.tableId}>
                 {d.tableName}（{d.tableId}）
@@ -113,36 +129,56 @@ function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
 
       {definition && (
         <>
-          <fieldset>
-            <legend>検索条件（未入力の項目は無視されます。文字列は部分一致、それ以外は完全一致）</legend>
-            {definition.columns.map((column) => (
-              <label key={column.columnId} style={{ marginRight: '1em' }}>
-                {column.columnName}:{' '}
-                <input
-                  type="text"
-                  value={searchInputs[column.columnId] ?? ''}
-                  onChange={(event) =>
-                    setSearchInputs((prev) => ({ ...prev, [column.columnId]: event.target.value }))
-                  }
-                />
-              </label>
-            ))}
-          </fieldset>
-          <button type="button" onClick={handleSearch} disabled={isLoading}>
-            検索
-          </button>{' '}
-          <button type="button" onClick={handleClear} disabled={isLoading}>
-            クリア（全件表示）
-          </button>{' '}
-          <button
-            type="button"
-            onClick={() => downloadCsv(`${definition.tableId}.csv`, definition, records)}
-            disabled={isLoading || records.length === 0}
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              handleSearch()
+            }}
           >
-            CSVダウンロード（全カラム）
-          </button>
+            <fieldset>
+              <legend>検索条件（未入力の項目は無視されます。文字列は部分一致、それ以外は完全一致）</legend>
+              {definition.columns.map((column) => (
+                <label key={column.columnId} style={{ marginRight: '1em' }}>
+                  {column.columnName}:{' '}
+                  <input
+                    type="text"
+                    value={searchInputs[column.columnId] ?? ''}
+                    onChange={(event) =>
+                      setSearchInputs((prev) => ({ ...prev, [column.columnId]: event.target.value }))
+                    }
+                  />
+                </label>
+              ))}
+            </fieldset>
+            <button type="submit" disabled={isLoading}>
+              検索
+            </button>{' '}
+            <button type="button" onClick={handleClear} disabled={isLoading}>
+              クリア（全件表示）
+            </button>{' '}
+            <button
+              type="button"
+              onClick={() => downloadCsv(`${definition.tableId}.csv`, definition, records)}
+              disabled={isLoading || records.length === 0}
+            >
+              CSVダウンロード（全カラム。取込画面へそのまま再取込可能な形式）
+            </button>
+          </form>
 
-          <p>{isLoading ? '読み込み中…' : `${records.length}件`}</p>
+          {ignoredColumnNames.length > 0 && (
+            <p role="alert">
+              次の項目は入力値を検索条件として解釈できなかったため無視しました:{' '}
+              {ignoredColumnNames.join('、')}
+            </p>
+          )}
+
+          <p>
+            {isLoading
+              ? '読み込み中…'
+              : records.length === 0
+                ? '該当するデータがありません。検索条件を変更するか、CSV取込画面からデータを登録してください。'
+                : `${records.length}件`}
+          </p>
 
           <table>
             <thead>

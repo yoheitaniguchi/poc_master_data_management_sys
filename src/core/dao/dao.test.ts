@@ -40,7 +40,7 @@ let db: IDBPDatabase
 let dao: MasterDao
 
 beforeEach(async () => {
-  db = await openMasterDb([itemDef], { storage: createMemoryStorage() })
+  ;({ db } = await openMasterDb([itemDef], { storage: createMemoryStorage() }))
   dao = createMasterDao(db, itemDef)
 })
 
