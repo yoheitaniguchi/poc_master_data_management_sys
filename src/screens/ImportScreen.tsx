@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DataAccessGate } from './DataAccessGate'
-import { importStatusLabel } from './importStatusLabels'
+import { importStatusLabel, importStatusVariant } from './importStatusLabels'
+import { Alert } from '../components/Alert'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Spinner } from '../components/Spinner'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
@@ -160,13 +161,13 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
       )}
 
       {outcome?.kind === 'error' && (
-        <div role="alert">
+        <Alert variant="error">
           <p>取込処理でエラーが発生しました: {outcome.message}</p>
           <p>
             CSVファイルの文字コード（UTF-8推奨）・ヘッダー行の内容、取込先テーブルの選択が
             正しいか確認し、再度お試しください。
           </p>
-        </div>
+        </Alert>
       )}
 
       {outcome?.kind === 'result' && <ImportResultSummary log={outcome.log} />}
@@ -176,7 +177,7 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
 
 function ImportResultSummary({ log }: { log: ImportLog }) {
   return (
-    <div role="status">
+    <Alert variant={importStatusVariant[log.status]} role="status">
       <h3>取込結果: {importStatusLabel[log.status]}</h3>
       <ul>
         <li>対象ファイル: {log.fileName}</li>
@@ -204,6 +205,6 @@ function ImportResultSummary({ log }: { log: ImportLog }) {
           </table>
         </div>
       )}
-    </div>
+    </Alert>
   )
 }

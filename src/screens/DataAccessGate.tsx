@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useMasterDataAccessContext } from '../MasterDataAccessContext'
+import { Alert } from '../components/Alert'
 import { Spinner } from '../components/Spinner'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { DefinitionValidationError } from '../core/schema/validateDefinition'
@@ -30,7 +31,7 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
 
   if (state.status === 'error') {
     return (
-      <div role="alert">
+      <Alert variant="error">
         <p>アプリの初期化に失敗しました: {state.message}</p>
         <p>
           下の「再読み込み」を試してください。繰り返し発生する場合は、開発チームに
@@ -39,14 +40,14 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
         <button type="button" className="btn-primary" onClick={() => window.location.reload()}>
           再読み込み
         </button>
-      </div>
+      </Alert>
     )
   }
 
   return (
     <>
       {state.definitionErrors.length > 0 && (
-        <div role="alert" className="definition-error-banner">
+        <Alert variant="warning">
           <p>
             一部のテーブル定義にエラーがあるため読み込めませんでした。該当テーブルは
             取込・検索・出力画面の選択肢に表示されません。以下の内容を参考に
@@ -59,7 +60,7 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
               </li>
             ))}
           </ul>
-        </div>
+        </Alert>
       )}
       {children(state.access, state.definitionErrors, state.exportDefinitions, state.exportDefinitionErrors)}
     </>
