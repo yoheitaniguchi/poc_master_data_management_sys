@@ -130,7 +130,12 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
         </label>
       </div>
 
-      <button type="button" onClick={handleImport} disabled={!definition || !file || isRunning}>
+      <button
+        type="button"
+        className="btn-danger"
+        onClick={handleImport}
+        disabled={!definition || !file || isRunning}
+      >
         {isRunning ? '取込実行中…' : '取込実行'}
       </button>
 

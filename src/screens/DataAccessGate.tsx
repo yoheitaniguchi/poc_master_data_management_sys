@@ -27,7 +27,7 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
     return (
       <div role="alert">
         <p>アプリの初期化に失敗しました: {state.message}</p>
-        <button type="button" onClick={() => window.location.reload()}>
+        <button type="button" className="btn-primary" onClick={() => window.location.reload()}>
           再読み込み
         </button>
       </div>

@@ -204,7 +204,7 @@ function SearchExportScreenBody({
                 </label>
               ))}
             </fieldset>
-            <button type="submit" disabled={isLoading}>
+            <button type="submit" className="btn-primary" disabled={isLoading}>
               検索
             </button>{' '}
             <button type="button" onClick={handleClear} disabled={isLoading}>
@@ -248,7 +248,12 @@ function SearchExportScreenBody({
 
           <fieldset>
             <legend>CSVダウンロード（上の検索結果を、全カラムそのまま出力）</legend>
-            <button type="button" onClick={handleDownloadAllColumns} disabled={isLoading || records.length === 0}>
+            <button
+              type="button"
+              className="btn-download"
+              onClick={handleDownloadAllColumns}
+              disabled={isLoading || records.length === 0}
+            >
               ダウンロード
             </button>
             {records.length === 0 && <p>※検索結果が0件のためダウンロードできません</p>}
@@ -289,7 +294,12 @@ function SearchExportScreenBody({
                     ))}
                   </select>
                 </label>{' '}
-                <button type="button" disabled={!selectedExportDefinition || records.length === 0} onClick={handleDownloadExport}>
+                <button
+                  type="button"
+                  className="btn-download"
+                  disabled={!selectedExportDefinition || records.length === 0}
+                  onClick={handleDownloadExport}
+                >
                   この定義で出力
                 </button>
                 {!selectedExportDefinition && <p>※連携ファイル定義を選択してください</p>}
