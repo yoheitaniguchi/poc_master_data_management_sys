@@ -32,6 +32,10 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
     return (
       <div role="alert">
         <p>アプリの初期化に失敗しました: {state.message}</p>
+        <p>
+          下の「再読み込み」を試してください。繰り返し発生する場合は、開発チームに
+          table-definitions/配下の定義JSONの内容を確認してください。
+        </p>
         <button type="button" className="btn-primary" onClick={() => window.location.reload()}>
           再読み込み
         </button>
@@ -44,8 +48,9 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
       {state.definitionErrors.length > 0 && (
         <div role="alert" className="definition-error-banner">
           <p>
-            一部のテーブル定義にエラーがあるため読み込めませんでした（定義JSONを確認してください）。
-            該当テーブルは取込・検索・出力画面の選択肢に表示されません:
+            一部のテーブル定義にエラーがあるため読み込めませんでした。該当テーブルは
+            取込・検索・出力画面の選択肢に表示されません。以下の内容を参考に
+            table-definitions/配下の該当JSONを修正し、ページを再読み込みしてください:
           </p>
           <ul>
             {state.definitionErrors.map((error, index) => (

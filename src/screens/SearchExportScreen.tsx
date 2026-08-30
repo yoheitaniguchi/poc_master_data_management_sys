@@ -277,8 +277,9 @@ function SearchExportScreenBody({
             {exportDefinitionErrors.length > 0 && (
               <div role="alert">
                 <p>
-                  一部の連携ファイル定義にエラーがあるため読み込めませんでした（定義JSONを確認してください）。
-                  該当の連携ファイル定義は下の選択肢に表示されません:
+                  一部の連携ファイル定義にエラーがあるため読み込めませんでした。該当の連携
+                  ファイル定義は下の選択肢に表示されません。以下の内容を参考に
+                  export-definitions/配下の該当JSONを修正し、ページを再読み込みしてください:
                 </p>
                 <ul>
                   {exportDefinitionErrors.map((error, index) => (
