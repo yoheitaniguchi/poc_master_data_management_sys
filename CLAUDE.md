@@ -46,13 +46,14 @@ poc_master_data_management_sys/
 │   ├── requirements.md      # 要求仕様書（原文、直接編集しない）
 │   ├── design.md            # 要求仕様書との差分・追加決定（★まず読む）
 │   └── implementation-plan.md # フェーズ計画・実施結果
-├── table-definitions/       # マスタテーブル定義JSON（実行時fetch対象、DO-1）
-│   ├── index.json             # 配置済みtableId一覧（GitHub Pagesにディレクトリ一覧APIがないため。design.md §4.6）
-│   ├── m_item.json           # 品目マスタ
-│   └── m_partner.json        # 取引先マスタ
-├── export-definitions/      # 連携ファイル定義JSON（実行時fetch対象、DO-8）
-│   ├── index.json             # 配置済みexportId一覧（design.md §4.6と同じマニフェスト方式）
-│   └── item_export_v1.json
+├── public/                  # Viteの規約: ここの内容だけがdist/へそのままコピーされる（design.md §4.9）
+│   ├── table-definitions/     # マスタテーブル定義JSON（実行時fetch対象、DO-1）
+│   │   ├── index.json           # 配置済みtableId一覧（GitHub Pagesにディレクトリ一覧APIがないため。design.md §4.6）
+│   │   ├── m_item.json         # 品目マスタ
+│   │   └── m_partner.json      # 取引先マスタ
+│   └── export-definitions/    # 連携ファイル定義JSON（実行時fetch対象、DO-8）
+│       ├── index.json           # 配置済みexportId一覧（design.md §4.6と同じマニフェスト方式）
+│       └── item_export_v1.json
 ├── package.json / tsconfig.json / vite.config.ts / index.html
 ├── .github/workflows/
 │   ├── test.yml              # PRごとの型チェック・ビルド・vitest
@@ -105,18 +106,21 @@ npm run preview       # build成果物をGitHub Pages相当のbaseパスで動�
 
 ## 現在の実装状況
 
-`docs/implementation-plan.md`のPhase 0〜6（プロジェクト初期化／マスタテーブル定義JSON＋実行時
+`docs/implementation-plan.md`のPhase 0〜7（プロジェクト初期化／マスタテーブル定義JSON＋実行時
 DAO生成／バリデーションエンジン／CSV取込・Web Worker／画面実装／連携ファイル作成機能／自動テスト
-整備）まで完了。`table-definitions/`（index.jsonマニフェスト＋m_item/m_partner）・
-`export-definitions/`（index.jsonマニフェスト＋item_export_v1）・`src/core/schema/`（定義JSONの
-型・fetch・定義自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・汎用DAO・
-import_logs用DAO）・`src/core/validation/`（型→NotNull→長さ→定数→ユニークの5手順バリデーション
-関数群）・`src/core/export/`（連携ファイル定義の型・読み込み・検証・CSV生成）・`src/workers/`
-（CSV取込の中核ロジックと薄いWorkerラッパー）・`src/screens/`（SCR-1〜3の3画面。SCR-2に連携
-ファイル出力を追加）・`src/useMasterDataAccess.ts`/`src/MasterDataAccessContext.tsx`（アプリ
-起動時のDAO・連携ファイル定義初期化とContext共有）・`src/scenarios/`（EFFECT-1/2シナリオ
-テスト）を実装済み。GitHub Pagesビルド・デプロイ構成（CI/CD）は未着手。
-次に着手すべきは`docs/implementation-plan.md`のPhase 7（GitHub Pagesビルド・デプロイ構成）。
+整備／GitHub Pagesビルド・デプロイ構成）まですべて完了。`public/table-definitions/`
+（index.jsonマニフェスト＋m_item/m_partner）・`public/export-definitions/`（index.json
+マニフェスト＋item_export_v1）・`src/core/schema/`（定義JSONの型・fetch・定義自体の検証）・
+`src/core/dao/`（idbベースの動的スキーマ構築・汎用DAO・import_logs用DAO）・
+`src/core/validation/`（型→NotNull→長さ→定数→ユニークの5手順バリデーション関数群）・
+`src/core/export/`（連携ファイル定義の型・読み込み・検証・CSV生成）・`src/workers/`（CSV取込の
+中核ロジックと薄いWorkerラッパー）・`src/screens/`（SCR-1〜3の3画面。SCR-2に連携ファイル出力を
+追加）・`src/useMasterDataAccess.ts`/`src/MasterDataAccessContext.tsx`（アプリ起動時のDAO・
+連携ファイル定義初期化とContext共有）・`src/scenarios/`（EFFECT-1/2シナリオテスト）・
+`.github/workflows/`（test.yml・deploy.yml）を実装済み。
+Phase 7で`table-definitions/`・`export-definitions/`をプロジェクトルート直下から
+`public/`配下へ移動した（Viteの規約上、`public/`配下のみが本番ビルドに含まれるため。
+詳細はdocs/design.md §4.9）。要求仕様書のスコープ（Issue #2〜#8）はこれで完了。
 
 ## 実装時に確認すべき設計判断（要求仕様書「やらない事」の再掲）
 

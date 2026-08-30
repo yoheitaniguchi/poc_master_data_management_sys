@@ -200,6 +200,40 @@ NotNullエラーになる）、DO-6/7とDO-5の間で往復可能なフォーマ
 バージョン判定・削除・再作成のロジックは持たない。ユーザーがCSV取込画面を開ける時点で
 アプリは起動済み（＝メインスレッドでのスキーマ構築が完了済み）であるため、この前提は成立する。
 
+### 4.9 table-definitions/・export-definitions/の配置場所（Phase 7）
+
+Phase 0〜6では`table-definitions/`・`export-definitions/`をプロジェクトルート直下に配置し、
+`npm run dev`で問題なく動作することを確認していた。しかしPhase 7で`npm run build`→
+`npm run preview`によるGitHub Pages相当環境での動作確認を初めて実施したところ、本番ビルド
+（`dist/`）にこれらのディレクトリが一切含まれておらず、実際のGitHub Pagesデプロイでは
+アプリがマスタテーブル定義・連携ファイル定義を一切読み込めず起動不能になることが判明した。
+
+**原因**: Viteの規約では、`vite build`が`dist/`へそのままコピーするのは`publicDir`
+（デフォルト`public/`）配下のファイルのみである。プロジェクトルート直下の任意のディレクトリは
+対象外。一方`vite dev`（開発サーバー）はプロジェクトルート全体をファイルシステム経由で
+配信するため、`public/`配下に置かなくても開発時は問題が表面化しない（Phase 0〜6のテスト・
+手動確認がすべて`npm run dev`ベースだったため、この欠落に気づけなかった）。
+
+**決定**: `table-definitions/`・`export-definitions/`を`public/table-definitions/`・
+`public/export-definitions/`へ移動する。実行時にfetchするURLパス（`${basePath}table-definitions/
+{tableId}.json`等）はこの移動によって変化しない（`public/`配下の内容は`dist/`の**ルート**へ
+そのままコピーされるため）。したがって`src/core/schema/loadTableDefinitions.ts`・
+`src/core/export/loadExportDefinitions.ts`のコード変更は不要で、物理的な配置場所のみの変更で
+済む。
+
+**合わせて発見・修正した関連バグ**: `vite.config.ts`の`base`切り替え条件`command === 'serve'`は、
+`vite dev`と`vite preview`の両方で`command`が`'serve'`になる（Viteの仕様）ため、`vite preview`
+（ビルド成果物をGitHub Pages相当のbaseパスで確認するためのコマンド）が誤って`base: '/'`
+（ルート配信）を使ってしまい、`dist/index.html`が参照する`/poc_master_data_management_sys/
+assets/...`のURLと食い違って動作しない不具合があった。`defineConfig`のコールバック引数に
+含まれる`isPreview`フラグで`vite preview`を判別するよう修正した
+（`base: command === 'serve' && !isPreview ? '/' : GITHUB_PAGES_BASE`）。
+
+この2つの不具合は、実際に`npm run build`→`npm run preview`をブラウザで動作確認するまで
+どちらも顕在化しなかった（`npm run dev`ベースの確認だけでは検知不能）。今後、ビルド設定や
+静的ファイル配置に関わる変更を行った際は、`npm run dev`だけでなく`npm run build`→
+`npm run preview`でも動作確認することが望ましい。
+
 ---
 
 ## §5. 実装時に確認すべき設計判断（要求仕様書からの再掲）

@@ -11,15 +11,17 @@ import { createMemoryStorage } from '../test/memoryStorage'
 import type { TableDefinition } from '../core/schema/types'
 import type { ExportDefinition } from '../core/export/types'
 
-// table-definitions/m_item.json・m_partner.json、export-definitions/index.json・
+// public/table-definitions/m_item.json・m_partner.json、public/export-definitions/index.json・
 // item_export_v1.jsonを直接読み込む（内容をこのテストファイル内に複製すると、実ファイルを
 // 変更してもテストが追随せず陳腐化するため。実際に配置されているファイルそのものを
 // loadTableDefinitions/loadExportDefinitionsに渡すことで、常に実態を反映したテストにする）。
-const tableDefinitionsDir = fileURLToPath(new URL('../../table-definitions/', import.meta.url))
+// public/配下にあるのはVite規約（publicDir配下のみがdist/にそのままコピーされ、実行時fetch
+// 対象になる。docs/design.md §4.9参照）。
+const tableDefinitionsDir = fileURLToPath(new URL('../../public/table-definitions/', import.meta.url))
 const itemDef: TableDefinition = JSON.parse(readFileSync(`${tableDefinitionsDir}m_item.json`, 'utf-8'))
 const partnerDef: TableDefinition = JSON.parse(readFileSync(`${tableDefinitionsDir}m_partner.json`, 'utf-8'))
 
-const exportDefinitionsDir = fileURLToPath(new URL('../../export-definitions/', import.meta.url))
+const exportDefinitionsDir = fileURLToPath(new URL('../../public/export-definitions/', import.meta.url))
 const exportIndex = JSON.parse(readFileSync(`${exportDefinitionsDir}index.json`, 'utf-8'))
 const itemExportDef: ExportDefinition = JSON.parse(readFileSync(`${exportDefinitionsDir}item_export_v1.json`, 'utf-8'))
 
