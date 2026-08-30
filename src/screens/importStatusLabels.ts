@@ -8,3 +8,11 @@ export const importStatusLabel: Record<ImportLog['status'], string> = {
   COMPLETED_WITH_ERRORS: '一部エラーあり',
   FAILED: '処理失敗',
 }
+
+// Issue #24: 取込結果（ImportResultSummary）をAlertコンポーネントで種別ごとに色分けするための対応表。
+export const importStatusVariant: Record<ImportLog['status'], 'info' | 'success' | 'warning' | 'error'> = {
+  RUNNING: 'info',
+  COMPLETED: 'success',
+  COMPLETED_WITH_ERRORS: 'warning',
+  FAILED: 'error',
+}

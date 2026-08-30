@@ -4,6 +4,7 @@ import { useMasterDataAccess } from './useMasterDataAccess'
 import { ImportScreen } from './screens/ImportScreen'
 import { SearchExportScreen } from './screens/SearchExportScreen'
 import { ImportLogScreen } from './screens/ImportLogScreen'
+import { Alert } from './components/Alert'
 
 type Tab = 'import' | 'search' | 'log'
 
@@ -26,7 +27,7 @@ export function App() {
         <h1>マスタ管理システム PoC</h1>
 
         {showRebuiltNotice && (
-          <div role="alert">
+          <Alert variant="warning">
             <p>
               テーブル定義の変更を検知したため、既存のマスタデータをすべて削除して再作成しました
               （PoCの簡易方針。docs/design.md §4.3。取込済みだったデータは失われています）。
@@ -34,7 +35,7 @@ export function App() {
             <button type="button" onClick={() => setDismissedRebuiltNotice(true)}>
               閉じる
             </button>
-          </div>
+          </Alert>
         )}
 
         <nav className="tab-nav">

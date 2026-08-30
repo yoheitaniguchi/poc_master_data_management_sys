@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Papa from 'papaparse'
 import { DataAccessGate } from './DataAccessGate'
+import { Alert } from '../components/Alert'
 import { Spinner } from '../components/Spinner'
 import { buildExportCsv } from '../core/export/buildExportCsv'
 import type { ExportDefinition } from '../core/export/types'
@@ -214,10 +215,12 @@ function SearchExportScreenBody({
           </form>
 
           {ignoredColumnNames.length > 0 && (
-            <p role="alert">
-              次の項目は入力値を検索条件として解釈できなかったため無視しました:{' '}
-              {ignoredColumnNames.join('、')}
-            </p>
+            <Alert variant="warning">
+              <p>
+                次の項目は入力値を検索条件として解釈できなかったため無視しました:{' '}
+                {ignoredColumnNames.join('、')}
+              </p>
+            </Alert>
           )}
 
           <p className={isLoading ? 'loading-inline' : undefined}>
@@ -275,7 +278,7 @@ function SearchExportScreenBody({
             <legend>連携ファイル定義による出力（上の検索結果を、決められた出力カラム・ヘッダー名に変換して出力）</legend>
 
             {exportDefinitionErrors.length > 0 && (
-              <div role="alert">
+              <Alert variant="warning">
                 <p>
                   一部の連携ファイル定義にエラーがあるため読み込めませんでした。該当の連携
                   ファイル定義は下の選択肢に表示されません。以下の内容を参考に
@@ -288,7 +291,7 @@ function SearchExportScreenBody({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </Alert>
             )}
 
             {availableExportDefinitions.length === 0 ? (
@@ -320,7 +323,11 @@ function SearchExportScreenBody({
             )}
           </fieldset>
 
-          {downloadMessage && <p role="status">{downloadMessage}</p>}
+          {downloadMessage && (
+            <Alert variant="success" role="status">
+              <p>{downloadMessage}</p>
+            </Alert>
+          )}
         </>
       )}
     </section>
