@@ -19,7 +19,35 @@
   `vitest`, `@vitejs/plugin-react`, `typescript`等
 
 ### 実施結果
-（未着手）
+
+- `npm create vite@latest`（`react-ts`テンプレート、2026年8月時点の最新版）を一時ディレクトリで
+  実行して現行テンプレートの構成を確認した上で、本リポジトリに合わせて手動整備した。テンプレートは
+  React 19・TypeScript 7系・`tsconfig.app.json`/`tsconfig.node.json`のproject references分割を
+  採用していたが、以下の理由で採用しなかった：
+  - React: CLAUDE.md/design.md §1で「React 18」と明記されているため`^18.3.1`系に固定
+  - TypeScript: レジストリの`latest`（7.0.2）はテンプレート自身も追随しておらず`~6.0.2`を採用していた
+    ため、同じく安定版6系（`~6.0.3`）に固定
+  - tsconfig分割: `npx tsc --noEmit`単体で型チェックが完結する構成が本ファイル（CLAUDE.md）の
+    コマンド一覧に明記されているため、project references（`tsc -b`必須）ではなく単一
+    `tsconfig.json`構成を採用
+- `package.json`: 依存関係は`react`/`react-dom`/`idb`/`papaparse`、devDependenciesに
+  `vite`/`@vitejs/plugin-react`/`typescript`/`vitest`/`@types/react`/`@types/react-dom`/
+  `@types/papaparse`/`@types/node`を追加。npm scriptsは計画通り`dev`/`build`
+  （`tsc --noEmit && vite build`）/`preview`/`test`（`vitest run`）
+- `vite.config.ts`: `command === 'serve'`かどうかで`base`を`/`（dev）と
+  `/poc_master_data_management_sys/`（build/preview、GitHub Pagesプロジェクトサイト配信パス）に
+  切り替え
+- `tsconfig.json`: strict有効・`jsx: react-jsx`・`moduleResolution: Bundler`。`src`と
+  `vite.config.ts`の両方を対象に含める
+- `src/main.tsx` / `src/App.tsx`: 最小限のプレースホルダー（画面本体はPhase 4で実装）
+- 動作確認（すべて成功）: `npm install` → `npx tsc --noEmit`（エラーなし）→
+  `npm run build`（`dist/index.html`に`/poc_master_data_management_sys/`配下のasset参照を確認）→
+  `npm run dev`（`http://localhost:5173/`にルート配信されることを確認）→
+  `npm run preview`（`http://localhost:4173/poc_master_data_management_sys/`配下で配信されることを
+  確認）
+- `npm test`（`vitest run`）はテストファイルが1件も存在しないため`No test files found, exiting
+  with code 1`で終了することを確認済み。これはPhase 0時点では想定通りの挙動であり、Phase 1・2で
+  DAO生成ロジック・バリデーションエンジンのテストを追加した時点で解消する
 
 ---
 

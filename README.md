@@ -15,15 +15,18 @@
 
 ## 現在の状態
 
-ドキュメント整備（Phase 0）のみ完了。アプリケーションコードは未着手。
+プロジェクト初期化（`docs/implementation-plan.md` Phase 0）まで完了。
+マスタテーブル定義・DAO・バリデーション等のアプリケーションロジックは未着手（Phase 1以降）。
 
 ## ローカル実行
 
-（Phase 0実装後に追記予定）
-
 ```
 npm install
-npm run dev
+npm run dev          # 開発サーバー起動
+npm run build         # 型チェック（tsc）＋ビルド（vite build）
+npx tsc --noEmit      # 型チェックのみ実行
+npm test              # vitestによる自動テスト全件実行
+npm run preview       # build成果物をGitHub Pages相当のbaseパスで動作確認
 ```
 
 ## 公開版
