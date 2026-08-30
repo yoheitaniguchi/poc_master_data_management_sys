@@ -145,6 +145,48 @@ button:disabled {
   border-color: #15803d;
 }
 
+/* Issue #19: 破壊的操作の確認用モーダル（ConfirmDialogコンポーネント）。 */
+.confirm-dialog {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  max-width: 420px;
+  width: calc(100% - var(--space-6));
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.24);
+}
+
+.confirm-dialog::backdrop {
+  background-color: rgba(15, 23, 42, 0.5);
+}
+
+.confirm-dialog__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.confirm-dialog__header h3 {
+  margin: 0;
+}
+
+.confirm-dialog__icon {
+  font-size: 1.25rem;
+}
+
+.confirm-dialog__message {
+  white-space: pre-line;
+  color: var(--color-text-muted);
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
 input,
 select,
 textarea {
