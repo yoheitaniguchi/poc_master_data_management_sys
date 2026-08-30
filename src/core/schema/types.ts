@@ -20,3 +20,6 @@ export interface TableDefinition {
 export interface TableDefinitionIndex {
   tableIds: string[]
 }
+
+export type MasterRecordValue = string | number | boolean | null
+export type MasterRecord = Record<string, MasterRecordValue>
