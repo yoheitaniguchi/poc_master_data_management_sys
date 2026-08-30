@@ -418,7 +418,41 @@
   （`/poc_master_data_management_sys/`）に対応させる
 
 ### 実施結果
-（未着手）
+
+- `.github/workflows/test.yml`: `main`宛のPRの作成・更新時に、型チェック（`tsc --noEmit`）→
+  ビルド（`vite build`）→テスト（`npm test`）を個別ステップで実行する
+- `.github/workflows/deploy.yml`: `main`へのpush時に、テスト→ビルド→`peaceiris/
+  actions-gh-pages@v4`で`dist/`を`gh-pages`ブランチへデプロイする（`permissions: contents:
+  write`・`concurrency`で同時デプロイの競合を防止）
+- **重大な不具合を2件発見・修正**（`npm run dev`ベースの確認だけでは検知できず、
+  `npm run build`→`npm run preview`を実際にPlaywrightでブラウザ確認して初めて判明した。
+  詳細はdocs/design.md §4.9を参照）：
+  1. `table-definitions/`・`export-definitions/`がプロジェクトルート直下にあり、Viteの規約
+     （`publicDir`＝デフォルト`public/`配下のみが`dist/`へコピーされる）に反していたため、
+     本番ビルドにこれらのJSON定義が一切含まれず、実際のGitHub Pagesデプロイではアプリが
+     完全に起動不能になる状態だった。`public/table-definitions/`・`public/export-definitions/`
+     へ移動して解消した（fetchするURLパス自体は変化しないため、アプリケーションコードの
+     変更は不要）
+  2. `vite.config.ts`の`base`切り替え条件`command === 'serve'`が`vite preview`にも
+     マッチしてしまい（Viteの仕様上、`vite dev`と`vite preview`はどちらも`command==='serve'`）、
+     `vite preview`が`base: '/'`（ルート配信）を使ってしまうことで、ビルド成果物
+     （`GITHUB_PAGES_BASE`前提で生成済み）が正しく配信されない不具合があった。
+     `defineConfig`の`isPreview`フラグで判別するよう修正した
+     （`base: command === 'serve' && !isPreview ? '/' : GITHUB_PAGES_BASE`）
+- `src/scenarios/effect1.test.ts`: `public/table-definitions/`・`public/export-definitions/`
+  への移動に合わせて、実ファイル読み込みパスを更新した
+- 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、19ファイル
+  103件すべて成功）→ `rm -rf dist && npm run build`（`dist/table-definitions/`・
+  `dist/export-definitions/`が含まれることを確認）→ `npm run preview`を起動しPlaywrightで
+  GitHub Pages相当の環境（`http://localhost:4173/poc_master_data_management_sys/`）で
+  実際にブラウザ操作して確認：起動時にテーブル定義（m_item・m_partner）が読み込まれる／
+  CSV取込（Web Worker経由、Workerチャンクもbaseパス配下から正しく読み込まれる）が部分成功
+  として動作する／検索画面がIndexedDBのデータを反映する／連携ファイル出力（DO-8）が
+  正しい内容で生成される／取込実行ログ画面が動作する、をすべて確認した
+- GitHub Actionsのワークフロー自体（実際のCI実行・`gh-pages`ブランチへの実デプロイ）は、
+  ブランチをpushしPRを作成した後の実際のCI実行結果で最終確認する（ローカルでは
+  `actionlint`等のツールが利用できなかったため、YAML構文の妥当性とワークフロー内の各コマンド
+  がローカルで問題なく動作することの確認に留めた）
 
 ---
 
