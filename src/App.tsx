@@ -37,14 +37,14 @@ export function App() {
           </div>
         )}
 
-        <nav>
+        <nav className="tab-nav">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
+              className={activeTab === tab.id ? 'tab-button tab-button--active' : 'tab-button'}
               onClick={() => setActiveTab(tab.id)}
               aria-current={activeTab === tab.id ? 'page' : undefined}
-              style={activeTab === tab.id ? { fontWeight: 'bold', textDecoration: 'underline' } : undefined}
             >
               {tab.label}
             </button>
