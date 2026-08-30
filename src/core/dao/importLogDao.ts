@@ -24,14 +24,15 @@ export interface ImportLog {
 }
 
 export interface ImportLogDao {
-  add(log: ImportLog): Promise<void>
+  /** importId一致時は上書き更新。取込開始時のRUNNING記録と完了時の更新の両方に使う */
+  save(log: ImportLog): Promise<void>
   findAll(): Promise<ImportLog[]>
   findById(importId: string): Promise<ImportLog | undefined>
 }
 
 export function createImportLogDao(db: IDBPDatabase): ImportLogDao {
   return {
-    add: async (log) => {
+    save: async (log) => {
       await db.put(IMPORT_LOG_STORE, log)
     },
     findAll: () => db.getAll(IMPORT_LOG_STORE),

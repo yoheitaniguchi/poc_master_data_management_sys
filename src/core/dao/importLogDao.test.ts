@@ -47,11 +47,19 @@ afterEach(async () => {
 })
 
 describe('createImportLogDao', () => {
-  it('addで登録した取込ログをfindAll/findByIdで取得できる', async () => {
-    await dao.add(sampleLog)
+  it('saveで登録した取込ログをfindAll/findByIdで取得できる', async () => {
+    await dao.save(sampleLog)
 
     expect(await dao.findAll()).toEqual([sampleLog])
     expect(await dao.findById('import-1')).toEqual(sampleLog)
     expect(await dao.findById('not-exist')).toBeUndefined()
+  })
+
+  it('同じimportIdでsaveすると上書き更新される（RUNNING→COMPLETED等の状態更新用途）', async () => {
+    await dao.save({ ...sampleLog, status: 'RUNNING', finishedAt: null, errors: [] })
+    await dao.save(sampleLog)
+
+    expect(await dao.findAll()).toHaveLength(1)
+    expect(await dao.findById('import-1')).toEqual(sampleLog)
   })
 })

@@ -77,6 +77,32 @@ describe('validateTableDefinition', () => {
     expect(errors[0].message).toContain('unique=false')
   })
 
+  it('primaryKeyカラムにnotNull=falseとunique=falseが同時に指定されている場合は両方エラーになる', () => {
+    const definition: TableDefinition = {
+      ...baseDefinition,
+      columns: [
+        { ...baseDefinition.columns[0], notNull: false, unique: false },
+        baseDefinition.columns[1],
+      ],
+    }
+    const errors = validateTableDefinition(definition)
+    expect(errors).toHaveLength(2)
+    expect(errors[0].message).toContain('notNull=false')
+    expect(errors[1].message).toContain('unique=false')
+  })
+
+  it('primaryKeyカラムのnotNullが未指定（JSON上で欠落）の場合は「明示false」とは異なるメッセージになる', () => {
+    const { notNull: _notNull, ...columnWithoutNotNull } = baseDefinition.columns[0]
+    const definition: TableDefinition = {
+      ...baseDefinition,
+      columns: [columnWithoutNotNull as unknown as TableDefinition['columns'][number], baseDefinition.columns[1]],
+    }
+    const errors = validateTableDefinition(definition)
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toContain('指定されていません')
+    expect(errors[0].message).not.toContain('notNull=false')
+  })
+
   it('columnIdが重複している場合はエラーになる', () => {
     const definition: TableDefinition = {
       ...baseDefinition,

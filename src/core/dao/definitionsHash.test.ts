@@ -55,4 +55,24 @@ describe('computeDefinitionsHash', () => {
   it('定義の追加・削除でハッシュが変わる（EFFECT-1のDB再構築トリガー）', () => {
     expect(computeDefinitionsHash([itemDef])).not.toBe(computeDefinitionsHash([itemDef, partnerDef]))
   })
+
+  it('maxLengthの値のみを変更してもハッシュが変わる（EFFECT-2のDB再構築トリガー）', () => {
+    const changed: TableDefinition = {
+      ...itemDef,
+      columns: [{ ...itemDef.columns[0], maxLength: 30 }],
+    }
+    expect(computeDefinitionsHash([itemDef])).not.toBe(computeDefinitionsHash([changed]))
+  })
+
+  it('constantsの値のみを変更してもハッシュが変わる（EFFECT-2のDB再構築トリガー）', () => {
+    const withConstants: TableDefinition = {
+      ...itemDef,
+      columns: [{ ...itemDef.columns[0], constants: ['A', 'B'] }],
+    }
+    const changedConstants: TableDefinition = {
+      ...itemDef,
+      columns: [{ ...itemDef.columns[0], constants: ['A', 'C'] }],
+    }
+    expect(computeDefinitionsHash([withConstants])).not.toBe(computeDefinitionsHash([changedConstants]))
+  })
 })

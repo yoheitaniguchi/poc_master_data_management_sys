@@ -18,16 +18,26 @@ export function validateTableDefinition(definition: TableDefinition): Definition
     })
   } else {
     const [primaryKeyColumn] = primaryKeyColumns
-    if (primaryKeyColumn.notNull !== true) {
+    if (primaryKeyColumn.notNull === false) {
       errors.push({
         tableId: definition.tableId,
         message: `primaryKeyカラム「${primaryKeyColumn.columnId}」にnotNull=falseは指定できません`,
       })
+    } else if (primaryKeyColumn.notNull !== true) {
+      errors.push({
+        tableId: definition.tableId,
+        message: `primaryKeyカラム「${primaryKeyColumn.columnId}」のnotNullが指定されていません（notNull=trueを指定してください）`,
+      })
     }
-    if (primaryKeyColumn.unique !== true) {
+    if (primaryKeyColumn.unique === false) {
       errors.push({
         tableId: definition.tableId,
         message: `primaryKeyカラム「${primaryKeyColumn.columnId}」にunique=falseは指定できません`,
+      })
+    } else if (primaryKeyColumn.unique !== true) {
+      errors.push({
+        tableId: definition.tableId,
+        message: `primaryKeyカラム「${primaryKeyColumn.columnId}」のuniqueが指定されていません（unique=trueを指定してください）`,
       })
     }
   }

@@ -26,6 +26,13 @@ const itemDef: TableDefinition = {
       notNull: true,
       unique: false,
     },
+    {
+      columnId: 'safety_stock',
+      columnName: '安全在庫数',
+      dataType: 'number',
+      notNull: false,
+      unique: false,
+    },
   ],
 }
 
@@ -71,6 +78,15 @@ describe('createMasterDao', () => {
     expect(await dao.search({ item_name: 'M6' })).toEqual([
       { item_code: 'A001', item_name: 'ボルト M6' },
       { item_code: 'A002', item_name: 'ナット M6' },
+    ])
+  })
+
+  it('searchはnumber/boolean等の非string列を完全一致でフィルタする', async () => {
+    await dao.upsert({ item_code: 'A001', item_name: 'ボルト', safety_stock: 10 })
+    await dao.upsert({ item_code: 'A002', item_name: 'ナット', safety_stock: 100 })
+
+    expect(await dao.search({ safety_stock: 10 })).toEqual([
+      { item_code: 'A001', item_name: 'ボルト', safety_stock: 10 },
     ])
   })
 

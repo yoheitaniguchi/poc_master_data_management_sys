@@ -89,8 +89,16 @@
 - テストは`fake-indexeddb`をvitestのsetupFilesで読み込み、Node環境のままIndexedDB操作を検証。
   `openMasterDb`はハッシュ不変時にデータを保持し、ハッシュ変化時に削除・再作成することを確認
 - 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、7ファイル
-  23件すべて成功）→ `npm run build`（エラーなし）
-- `logic-reviewer`サブエージェントでレビュー済み（指摘事項なし、詳細は本PRの説明を参照）
+  30件すべて成功）→ `npm run build`（エラーなし）
+- `logic-reviewer`サブエージェントでレビュー済み。要求仕様書・design.mdとの明確な矛盾は
+  指摘されなかったが、以下の改善提案を反映した：
+  - `validateTableDefinition`のエラーメッセージを、primaryKeyカラムのnotNull/uniqueが
+    「明示的にfalse」なのか「未指定」なのかで区別するよう修正（原因の誤解を防ぐため）
+  - `ImportLogDao.add`を`save`に改名（Phase 3でRUNNING記録→COMPLETED更新の両方に同じ
+    メソッドを使う想定のため、追加専用に見える命名を解消）
+  - テストケースを追加: primaryKeyへのnotNull/unique同時false指定、notNull未指定時の
+    メッセージ区別、maxLength/constants値のみの変更によるハッシュ変化・DB再作成
+    （EFFECT-2のトリガー経路）、search関数のnumber列完全一致
 
 ---
 

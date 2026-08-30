@@ -88,4 +88,20 @@ describe('openMasterDb', () => {
     expect(record).toBeUndefined()
     db2.close()
   })
+
+  it('テーブル構成は同じでもmaxLength等の値のみが変わればデータを削除して再作成する（EFFECT-2）', async () => {
+    const storage = createMemoryStorage()
+    const db1 = await openMasterDb([itemDef], { storage })
+    await db1.put('m_item', { item_code: 'A001', item_name: 'テスト品目' })
+    db1.close()
+
+    const itemDefWithWiderMaxLength: TableDefinition = {
+      ...itemDef,
+      columns: [itemDef.columns[0], { ...itemDef.columns[1], maxLength: 200 }],
+    }
+    const db2 = await openMasterDb([itemDefWithWiderMaxLength], { storage })
+    const record = await db2.get('m_item', 'A001')
+    expect(record).toBeUndefined()
+    db2.close()
+  })
 })
