@@ -1,8 +1,7 @@
 import type { IDBPDatabase } from 'idb'
-import type { TableDefinition } from '../schema/types'
+import type { MasterRecord, TableDefinition } from '../schema/types'
 
-export type MasterRecordValue = string | number | boolean | null
-export type MasterRecord = Record<string, MasterRecordValue>
+export type { MasterRecord, MasterRecordValue } from '../schema/types'
 
 export interface MasterDao {
   readonly tableId: string

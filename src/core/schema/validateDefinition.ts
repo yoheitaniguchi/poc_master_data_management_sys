@@ -51,6 +51,24 @@ export function validateTableDefinition(definition: TableDefinition): Definition
       })
     }
     seenColumnIds.add(column.columnId)
+
+    // primaryKeyカラムのnotNull/uniqueは上のブロックで既に判定済み。それ以外のカラムも
+    // 要求仕様書§5.1でnotNull/uniqueは必須項目（○）のため、値の欠落（JSON側の書き漏れ）を
+    // ここで検出する。欠落するとバリデーションエンジンが「任意項目」として扱ってしまうため。
+    if (column.primaryKey !== true) {
+      if (typeof column.notNull !== 'boolean') {
+        errors.push({
+          tableId: definition.tableId,
+          message: `カラム「${column.columnId}」のnotNullが指定されていません（真偽値で指定してください）`,
+        })
+      }
+      if (typeof column.unique !== 'boolean') {
+        errors.push({
+          tableId: definition.tableId,
+          message: `カラム「${column.columnId}」のuniqueが指定されていません（真偽値で指定してください）`,
+        })
+      }
+    }
   }
 
   return errors
