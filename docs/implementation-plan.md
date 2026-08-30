@@ -62,7 +62,35 @@
   バージョン管理を含む）、テーブルごとの汎用DAO関数（`findAll`/`findByKey`/`search`/`upsert`/`count`等）
 
 ### 実施結果
-（未着手）
+
+- `table-definitions/index.json`を新設し、`tableId`一覧を管理するマニフェストとした
+  （GitHub Pagesにディレクトリ一覧APIがないための対応。`docs/design.md` §4.6に決定を記録）。
+  `loadTableDefinitions`はこのindex.jsonを起点に各定義JSONを個別fetchする
+- `src/core/schema/types.ts`: `TableDefinition`/`ColumnDefinition`/`TableDefinitionIndex`の
+  TypeScript型を定義（要求仕様書§5.1のフィールド定義に対応）
+- `src/core/schema/validateDefinition.ts`: 定義JSON自体の検証（primaryKeyがちょうど1つ・
+  primaryKeyカラムへのnotNull=false/unique=false明示指定・columnId重複）。エラーは例外にせず
+  `DefinitionValidationError[]`として返し、該当テーブルのみ読み込み対象から除外する方針とした
+  （1テーブルの定義エラーがアプリ全体の起動を止めないようにするため）
+- `src/core/schema/loadTableDefinitions.ts`: index.json→各定義JSONの順にfetchし、取得失敗・
+  定義エラーのテーブルは`errors`に集約、正常なテーブルのみ`definitions`として返す
+- `src/core/dao/definitionsHash.ts`: 定義配列をtableId順にソートしてシリアライズし、djb2で
+  簡易ハッシュ化（`docs/design.md` §4.3のバージョン管理に使用）
+- `src/core/dao/openMasterDb.ts`: `idb`の`openDB`/`deleteDB`を用い、保存済みハッシュと現在の
+  ハッシュが異なる場合のみDB削除→再作成する。テーブルごとにprimaryKeyカラムをkeyPathとした
+  オブジェクトストアを動的生成し、加えて`import_logs`ストアを固定で生成する
+- `src/core/dao/dao.ts`: テーブル定義から汎用DAO（`findAll`/`findByKey`/`search`/`upsert`/
+  `count`）を生成する`createMasterDao`。`search`は文字列カラムを部分一致、それ以外は完全一致とし、
+  空欄条件は無視する。`upsert`は`db.put`（主キーで自動的に上書き/新規判定）を使用
+- `src/core/dao/importLogDao.ts`: `import_logs`ストア用のDAOと、要求仕様書§5.5に対応する
+  `ImportLog`型を定義
+- `src/core/dao/masterDataAccess.ts`: 上記を束ね、定義配列から`MasterDataAccess`
+  （db・definitions・tableIdごとのDAO Map・importLogDao）を構築する`initMasterDataAccess`
+- テストは`fake-indexeddb`をvitestのsetupFilesで読み込み、Node環境のままIndexedDB操作を検証。
+  `openMasterDb`はハッシュ不変時にデータを保持し、ハッシュ変化時に削除・再作成することを確認
+- 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、7ファイル
+  23件すべて成功）→ `npm run build`（エラーなし）
+- `logic-reviewer`サブエージェントでレビュー済み（指摘事項なし、詳細は本PRの説明を参照）
 
 ---
 

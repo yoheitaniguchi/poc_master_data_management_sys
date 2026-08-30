@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // GitHub Pagesのプロジェクトサイト配信パス。
 // `npm run dev`はルート配信、通常のbuild/previewはこのパス配下で配信する（docs/design.md §4.4）。
@@ -9,4 +9,8 @@ const GITHUB_PAGES_BASE = '/poc_master_data_management_sys/'
 export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/' : GITHUB_PAGES_BASE,
   plugins: [react()],
+  test: {
+    environment: 'node',
+    setupFiles: ['./src/test/setupFakeIndexedDb.ts'],
+  },
 }))
