@@ -18,6 +18,13 @@ export interface ValidateRowResult {
   /** 全チェック通過時のみ値が入る（1つでもエラーがあればundefined、要求仕様書§5.3の部分成功方針） */
   record: MasterRecord | undefined
   errors: CellValidationError[]
+  /**
+   * unique=trueのカラムのうち、そのカラム自身の①〜⑤チェックを通過した値。行全体が他カラムの
+   * エラーで不採用（record=undefined）になった場合でも、CSVファイル内重複検出のためには
+   * 「このカラムのこの値は既に出現した」という事実は引き続き必要になるため、recordとは別に公開する
+   * （呼び出し側＝Phase 3のCSV取込Workerが、次の行を検証する前にseenInFileへ反映する）
+   */
+  passedUniqueValues: Partial<MasterRecord>
 }
 
 // 要求仕様書§5.2の順序（①型→②NotNull→③長さ→④定数→⑤ユニーク）でCSV1行を検証する。
@@ -27,6 +34,7 @@ export function validateRow(options: ValidateRowOptions): ValidateRowResult {
   const { definition, rawRow, uniqueContexts } = options
   const errors: CellValidationError[] = []
   const record: MasterRecord = {}
+  const passedUniqueValues: Partial<MasterRecord> = {}
   const primaryKeyColumnId = definition.columns.find((column) => column.primaryKey)?.columnId
 
   for (const column of definition.columns) {
@@ -71,7 +79,10 @@ export function validateRow(options: ValidateRowOptions): ValidateRowResult {
     }
 
     record[column.columnId] = typeResult.value ?? null
+    if (column.unique) {
+      passedUniqueValues[column.columnId] = typeResult.value ?? null
+    }
   }
 
-  return { record: errors.length === 0 ? record : undefined, errors }
+  return { record: errors.length === 0 ? record : undefined, errors, passedUniqueValues }
 }

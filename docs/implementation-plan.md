@@ -157,7 +157,35 @@
 - 取込実行ログ（`import_logs`、要求仕様書§5.5のフィールド定義）を1回の取込につき1件生成
 
 ### 実施結果
-（未着手）
+
+- `src/workers/importCsvFile.ts`: CSV取込の中核ロジック（パース・バリデーション・Upsert・
+  取込ログ生成）を、実際のWorker/DOM APIに依存しない純粋な非同期関数として実装。
+  `MasterDao`/`ImportLogDao`（Phase 1で定義したインターフェース）に依存する形にしたことで、
+  `fake-indexeddb`ベースの単体テストをWorker環境なしに実行できる
+  - CSVヘッダーはtable-definitionsの`columnId`と一致させる前提とした（papaparseの
+    `header: true`でcolumnIdキーのオブジェクトとしてパース）
+  - unique=trueの全カラムについて、取込開始時に`masterDao.findAll()`を1回だけ呼び出して
+    IndexedDB内の既存値集合を構築し、CSVファイル内の重複検出用集合（`seenInFile`）を
+    行ごとに更新しながら`validateRow`（Phase 2）へ渡す。1行が他カラムのエラーで不採用に
+    なった場合でも、`validateRow`が新設した`passedUniqueValues`を使って「そのカラム自身は
+    通過した」事実を`seenInFile`へ反映し、後続行との重複判定に活かす
+  - 取込ログは開始時に`status: RUNNING`で一旦保存し、完了後に最終状態（`COMPLETED`／
+    `COMPLETED_WITH_ERRORS`）で同じ`importId`により上書き保存する。処理中に例外が発生した
+    場合は`FAILED`として記録し、例外を呼び出し元へ伝播させない（取込処理自体が要求仕様書
+    §5.5の`FAILED`ステータスとして正常に完了する設計）
+  - `rowNumber`はヘッダー行を除いたデータ行の1始まり番号と定義した（要求仕様書はrowNumberの
+    起点を明示していないため、CSVを表計算ソフトで見たときの直感に合わせた）
+- `src/workers/csvImport.worker.ts`: 上記を呼び出す薄いWorkerラッパー。DBスキーマの
+  バージョン管理（ハッシュ比較・削除再作成）はアプリ起動時にメインスレッドで完了している
+  前提とし、Worker内では`idb`の`openDB(DB_NAME, 1)`で既存DBに接続するだけにした
+  （`localStorage`はWorkerから参照できないため）。tsconfigは`lib: ["DOM", ...]`のまま
+  変更せず、当該ファイル内のみ`/// <reference lib="webworker" />`と`self`のキャストで
+  Worker向けの型を得る方式とした（DOM libとの共存のため）
+  - 実際のWorkerインスタンス化（`new Worker(...)`）はPhase 4（画面実装）でSCR-1から行う。
+    本フェーズでは`self.onmessage`のロジック自体の型チェックまでを対象とした
+- 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、14ファイル
+  77件すべて成功）→ `npm run build`（エラーなし）
+- `logic-reviewer`サブエージェントでレビュー済み（詳細はPR説明を参照）
 
 ---
 
