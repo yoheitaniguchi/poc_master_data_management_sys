@@ -6,6 +6,8 @@
  */
 
 :root {
+  color-scheme: light;
+
   --color-bg: #f6f7f9;
   --color-surface: #ffffff;
   --color-text: #1f2328;
@@ -17,6 +19,21 @@
   --color-warning: #d97706;
   --color-success: #16a34a;
   --color-info: #0284c7;
+
+  --table-hover-bg: #e0e7ff;
+
+  --alert-error-bg: #fef2f2;
+  --alert-error-border: #fecaca;
+  --alert-error-text: #991b1b;
+  --alert-warning-bg: #fffbeb;
+  --alert-warning-border: #fde68a;
+  --alert-warning-text: #92400e;
+  --alert-success-bg: #f0fdf4;
+  --alert-success-border: #bbf7d0;
+  --alert-success-text: #166534;
+  --alert-info-bg: #eff6ff;
+  --alert-info-border: #bfdbfe;
+  --alert-info-text: #1e40af;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -39,6 +56,65 @@
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
+/*
+ * Issue #25: ライト/ダークモード。
+ * 明示的な選択（ThemeToggleが<html data-theme="...">に反映しlocalStorageへ保存）が
+ * ない間はOSの配色設定（prefers-color-scheme）に追従する。data-theme="light"が
+ * 明示されている間はOS設定がdarkでもライトのままにするため、darkのメディアクエリは
+ * :not([data-theme="light"])でガードする。
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --color-bg: #16181d;
+    --color-surface: #1f232b;
+    --color-text: #e6e8eb;
+    --color-text-muted: #9aa4b2;
+    --color-border: #333a46;
+
+    --table-hover-bg: #1e2a4a;
+
+    --alert-error-bg: #3a1a1a;
+    --alert-error-border: #7f1d1d;
+    --alert-error-text: #fca5a5;
+    --alert-warning-bg: #392b10;
+    --alert-warning-border: #78350f;
+    --alert-warning-text: #fcd34d;
+    --alert-success-bg: #0f2a1c;
+    --alert-success-border: #14532d;
+    --alert-success-text: #86efac;
+    --alert-info-bg: #101f36;
+    --alert-info-border: #1e3a5f;
+    --alert-info-text: #93c5fd;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #16181d;
+  --color-surface: #1f232b;
+  --color-text: #e6e8eb;
+  --color-text-muted: #9aa4b2;
+  --color-border: #333a46;
+
+  --table-hover-bg: #1e2a4a;
+
+  --alert-error-bg: #3a1a1a;
+  --alert-error-border: #7f1d1d;
+  --alert-error-text: #fca5a5;
+  --alert-warning-bg: #392b10;
+  --alert-warning-border: #78350f;
+  --alert-warning-text: #fcd34d;
+  --alert-success-bg: #0f2a1c;
+  --alert-success-border: #14532d;
+  --alert-success-text: #86efac;
+  --alert-info-bg: #101f36;
+  --alert-info-border: #1e3a5f;
+  --alert-info-text: #93c5fd;
+}
+
 *,
 *::before,
 *::after {
@@ -58,6 +134,21 @@ body {
   max-width: 1080px;
   margin: 0 auto;
   padding: var(--space-5);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.app-header h1 {
+  margin: 0;
+}
+
+.theme-toggle {
+  flex-shrink: 0;
 }
 
 h1 {
@@ -175,27 +266,27 @@ button:disabled {
 }
 
 .alert--error {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background-color: var(--alert-error-bg);
+  border-color: var(--alert-error-border);
+  color: var(--alert-error-text);
 }
 
 .alert--warning {
-  background-color: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background-color: var(--alert-warning-bg);
+  border-color: var(--alert-warning-border);
+  color: var(--alert-warning-text);
 }
 
 .alert--success {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
+  background-color: var(--alert-success-bg);
+  border-color: var(--alert-success-border);
+  color: var(--alert-success-text);
 }
 
 .alert--info {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background-color: var(--alert-info-bg);
+  border-color: var(--alert-info-border);
+  color: var(--alert-info-text);
 }
 
 /* Issue #22: ローディング状態の視覚的フィードバック（Spinnerコンポーネント）。 */
@@ -255,7 +346,7 @@ tbody tr:nth-child(even) {
 }
 
 tbody tr:hover {
-  background-color: #e0e7ff;
+  background-color: var(--table-hover-bg);
 }
 
 th.col-numeric,
