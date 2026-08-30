@@ -95,9 +95,11 @@ npm run preview       # build成果物をGitHub Pages相当のbaseパスで動�
 
 ## 現在の実装状況
 
-**Phase 0（ドキュメント整備：要求仕様書の格納・設計判断の確定・フェーズ計画・CLAUDE.md・
-レビューSubagentの整備）のみ完了。アプリケーションコードは未着手。**
-次に着手すべきは`docs/implementation-plan.md`のPhase 0（プロジェクト初期化）。
+ドキュメント整備（要求仕様書の格納・設計判断の確定・フェーズ計画・CLAUDE.md・レビューSubagentの
+整備）に続き、`docs/implementation-plan.md`のPhase 0（プロジェクト初期化：Vite+React+TypeScript
+スカフォールド、npm scripts、依存関係）まで完了。マスタテーブル定義・DAO・バリデーション等の
+アプリケーションロジックは未着手。
+次に着手すべきは`docs/implementation-plan.md`のPhase 1（マスタテーブル定義JSON＋実行時DAO生成）。
 
 ## 実装時に確認すべき設計判断（要求仕様書「やらない事」の再掲）
 
