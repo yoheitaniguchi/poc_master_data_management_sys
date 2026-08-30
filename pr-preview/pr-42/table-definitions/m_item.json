@@ -1,0 +1,39 @@
+{
+  "tableId": "m_item",
+  "tableName": "品目マスタ",
+  "columns": [
+    {
+      "columnId": "item_code",
+      "columnName": "品目コード",
+      "dataType": "string",
+      "maxLength": 20,
+      "notNull": true,
+      "unique": true,
+      "primaryKey": true
+    },
+    {
+      "columnId": "item_name",
+      "columnName": "品目名",
+      "dataType": "string",
+      "maxLength": 100,
+      "notNull": true,
+      "unique": false
+    },
+    {
+      "columnId": "item_type",
+      "columnName": "品目区分",
+      "dataType": "string",
+      "maxLength": 10,
+      "notNull": true,
+      "unique": false,
+      "constants": ["完成品", "半製品", "原材料"]
+    },
+    {
+      "columnId": "safety_stock",
+      "columnName": "安全在庫数",
+      "dataType": "number",
+      "notNull": false,
+      "unique": false
+    }
+  ]
+}
