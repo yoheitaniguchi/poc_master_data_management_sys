@@ -1,0 +1,1000 @@
+<!doctype html>
+<title>コールフロー・インスペクタ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#eef1f4;
+    --surface:#ffffff;
+    --surface-2:#e4e9ee;
+    --surface-3:#d7dee4;
+    --ink:#16212c;
+    --ink-soft:#55606c;
+    --ink-faint:#8592a0;
+    --line:#c7d0d8;
+    --accent:#0e7a8a;
+    --accent-soft:#0e7a8a1a;
+    --accent-2:#a8690f;
+    --accent-2-soft:#a8690f1a;
+    --ok:#1f8a52;
+    --ok-soft:#1f8a521a;
+    --err:#c23b3b;
+    --err-soft:#c23b3b1a;
+    --shadow:0 1px 2px rgba(22,33,44,.06), 0 6px 20px rgba(22,33,44,.06);
+    --font-display:"IBM Plex Sans",system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    --font-body:"IBM Plex Sans",system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e1620;
+      --surface:#16212c;
+      --surface-2:#1c2a37;
+      --surface-3:#243542;
+      --ink:#e7edf2;
+      --ink-soft:#9fb0bf;
+      --ink-faint:#6b7c8c;
+      --line:#2c3b4a;
+      --accent:#57d6c9;
+      --accent-soft:#57d6c926;
+      --accent-2:#e3a94a;
+      --accent-2-soft:#e3a94a26;
+      --ok:#4fd17d;
+      --ok-soft:#4fd17d26;
+      --err:#f2726b;
+      --err-soft:#f2726b26;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1620;
+    --surface:#16212c;
+    --surface-2:#1c2a37;
+    --surface-3:#243542;
+    --ink:#e7edf2;
+    --ink-soft:#9fb0bf;
+    --ink-faint:#6b7c8c;
+    --line:#2c3b4a;
+    --accent:#57d6c9;
+    --accent-soft:#57d6c926;
+    --accent-2:#e3a94a;
+    --accent-2-soft:#e3a94a26;
+    --ok:#4fd17d;
+    --ok-soft:#4fd17d26;
+    --err:#f2726b;
+    --err-soft:#f2726b26;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html{color-scheme:light dark}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:14px;
+    line-height:1.6;
+  }
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .app{max-width:1280px;margin:0 auto;padding:28px 24px 64px}
+
+  .topbar{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .topbar h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:-.01em;
+    margin:0 0 4px;
+    text-wrap:balance;
+  }
+  .topbar .kicker{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 6px;
+  }
+  .topbar p{margin:0;color:var(--ink-soft);max-width:60ch}
+  .topbar .meta{font-family:var(--font-mono);font-size:12px;color:var(--ink-faint)}
+
+  .picker{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+  .picker-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+  .picker-row .cat{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--ink-faint);
+    min-width:9ch;
+    letter-spacing:.03em;
+  }
+  .chip{
+    font:inherit;
+    font-size:13px;
+    font-family:var(--font-body);
+    color:var(--ink-soft);
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 12px;
+    cursor:pointer;
+    transition:border-color .12s, color .12s, background .12s;
+  }
+  .chip:hover{border-color:var(--accent);color:var(--ink)}
+  .chip[aria-pressed="true"]{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    font-weight:500;
+  }
+
+  .brief{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px 18px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow);
+  }
+  .brief .trigger{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--accent);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    margin:0 0 4px;
+  }
+  .brief h2{font-family:var(--font-display);font-size:17px;margin:0 0 4px}
+  .brief p{margin:0;color:var(--ink-soft)}
+
+  .transport{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 14px;
+    margin-bottom:18px;
+    font-family:var(--font-mono);
+  }
+  .transport .btns{display:flex;gap:6px}
+  .tbtn{
+    width:34px;height:34px;
+    display:inline-flex;align-items:center;justify-content:center;
+    border-radius:7px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink);
+    cursor:pointer;
+    font-size:14px;
+    transition:background .12s, border-color .12s;
+  }
+  .tbtn:hover:not(:disabled){border-color:var(--accent)}
+  .tbtn:disabled{opacity:.4;cursor:not-allowed}
+  .tbtn.play{width:auto;padding:0 14px;gap:6px;background:var(--accent);border-color:var(--accent);color:#fff;font-family:var(--font-body);font-weight:500}
+  .tbtn.play:hover:not(:disabled){filter:brightness(1.08)}
+  .transport .speed{display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:12px}
+  .transport .speed input{accent-color:var(--accent)}
+  .transport .counter{
+    margin-left:auto;
+    color:var(--ink-soft);
+    font-size:12px;
+    font-variant-numeric:tabular-nums;
+  }
+  .transport .counter b{color:var(--ink)}
+
+  .stage{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+  @media (max-width:860px){.stage{grid-template-columns:1fr}}
+
+  .diagram-pane{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    overflow:auto;
+    max-height:70vh;
+    position:relative;
+  }
+  .participants{position:sticky;top:0;background:var(--surface);z-index:2;border-bottom:1px solid var(--line)}
+  .pbox{
+    position:absolute;top:10px;
+    width:132px;
+    text-align:center;
+  }
+  .pbox .card{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:7px 6px 6px;
+  }
+  .pbox.actor .card{background:transparent;border:none;padding-top:0}
+  .pbox .icon{margin:0 auto 2px;display:block;color:var(--accent)}
+  .pbox .name{font-size:12px;font-weight:600;line-height:1.25;word-break:break-word}
+  .pbox .code{display:block;font-family:var(--font-mono);font-size:9.5px;color:var(--ink-faint);margin-top:2px;word-break:break-all}
+
+  svg.lanes{display:block}
+  .lifeline{stroke:var(--line);stroke-width:1.5;stroke-dasharray:3 4}
+  .band{fill:var(--accent-soft);opacity:0;transition:opacity .25s}
+  .band.tone-warn{fill:var(--accent-2-soft)}
+  .band-label{font-family:var(--font-mono);font-size:10px;fill:var(--ink-faint);letter-spacing:.02em}
+  .activation{fill:var(--surface-3);stroke:var(--line);stroke-width:1;opacity:0;transition:opacity .25s, fill .2s}
+  .activation.open{fill:var(--accent-soft);stroke:var(--accent)}
+  .msg{opacity:0;transition:opacity .3s}
+  .msg .path{fill:none;stroke:var(--accent);stroke-width:1.6}
+  .msg.kind-return .path{stroke:var(--ink-soft);stroke-dasharray:5 4}
+  .msg.kind-self .path{stroke:var(--accent-2)}
+  .msg.branch-ok .path{stroke:var(--ok)}
+  .msg.branch-err .path{stroke:var(--err)}
+  .msg .label{font-size:11.5px;fill:var(--ink-soft)}
+  .msg.branch-ok .label{fill:var(--ok)}
+  .msg.branch-err .label{fill:var(--err)}
+  .msg .bg{fill:var(--surface)}
+  .msg.current .path{stroke-width:2.6}
+  .msg.current .label{fill:var(--ink);font-weight:600}
+  .msg.current .dot{fill:var(--accent)}
+  .msg.current.branch-ok .dot{fill:var(--ok)}
+  .msg.current.branch-err .dot{fill:var(--err)}
+
+  .badge{
+    display:inline-block;
+    font-family:var(--font-mono);
+    font-size:9.5px;
+    letter-spacing:.03em;
+    padding:1px 6px;
+    border-radius:999px;
+    border:1px solid currentColor;
+  }
+  .badge.ok{color:var(--ok)}
+  .badge.err{color:var(--err)}
+
+  .log-pane{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    max-height:70vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .log-pane h3{
+    font-family:var(--font-mono);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-faint);
+    margin:0;
+    padding:12px 14px 8px;
+    border-bottom:1px solid var(--line);
+  }
+  .log-list{list-style:none;margin:0;padding:6px;overflow:auto}
+  .log-item{
+    display:block;width:100%;text-align:left;
+    background:none;border:none;color:inherit;font:inherit;
+    border-radius:8px;
+    padding:6px 8px;
+    cursor:pointer;
+    opacity:.4;
+  }
+  .log-item:hover{background:var(--surface-2)}
+  .log-item.seen{opacity:1}
+  .log-item.current{background:var(--accent-soft)}
+  .log-item .row1{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-faint)}
+  .log-item .num{width:2.4em;flex:none;font-variant-numeric:tabular-nums}
+  .log-item .arrow{color:var(--ink-faint)}
+  .log-item .text{margin-top:2px;font-size:12.5px;color:var(--ink)}
+  .log-item.current .text{font-weight:600}
+
+  .detail{
+    margin-top:14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    border-radius:10px;
+    padding:12px 16px;
+    box-shadow:var(--shadow);
+  }
+  .detail .step-kicker{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);margin:0 0 4px}
+  .detail .flow-line{font-family:var(--font-mono);font-size:13px;color:var(--accent);margin:0 0 4px}
+  .detail p{margin:0;color:var(--ink-soft)}
+  .detail.empty{border-left-color:var(--line);color:var(--ink-faint)}
+
+  .overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .ocard{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px 18px;
+    box-shadow:var(--shadow);
+  }
+  .ocard h3{font-family:var(--font-display);font-size:15px;margin:0 0 2px}
+  .ocard .path{display:block;font-family:var(--font-mono);font-size:11px;color:var(--accent);margin-bottom:8px}
+  .ocard ul{margin:0;padding-left:18px;color:var(--ink-soft);font-size:12.5px}
+  .ocard li{margin-bottom:3px}
+  .ocard .deps{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-family:var(--font-mono);font-size:11px;color:var(--ink-faint)}
+  .ocard .deps b{color:var(--ink-soft);font-weight:500}
+
+  footer{margin-top:28px;color:var(--ink-faint);font-size:12px}
+  footer code{font-family:var(--font-mono);background:var(--surface-2);padding:1px 5px;border-radius:4px}
+
+  @media (prefers-reduced-motion: reduce){
+    .band,.activation,.msg{transition:none}
+  }
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div>
+      <p class="kicker">poc_master_data_management_sys &mdash; runtime call flow</p>
+      <h1>コールフロー・インスペクタ</h1>
+      <p>フロントエンドの操作イベントを1つ選ぶと、実際に実装されているモジュールがどの順番で呼び出されるかを1ステップずつ再生できる。左のトランスポートで再生／一時停止／コマ送りが可能。</p>
+    </div>
+    <p class="meta">静的なMermaid版: <code>docs/program-flow.md</code></p>
+  </header>
+
+  <nav class="picker" id="picker"></nav>
+
+  <div class="brief" id="brief"></div>
+
+  <div class="transport" id="transport">
+    <div class="btns">
+      <button class="tbtn" id="btn-reset" title="最初に戻す">⏮</button>
+      <button class="tbtn" id="btn-back" title="1ステップ戻る">◀</button>
+      <button class="tbtn play" id="btn-play" title="再生 / 一時停止">▶ 再生</button>
+      <button class="tbtn" id="btn-fwd" title="1ステップ進む">▶</button>
+    </div>
+    <label class="speed">再生速度
+      <input type="range" id="speed" min="400" max="2400" step="100" value="1100">
+    </label>
+    <div class="counter">ステップ <b id="step-now">0</b> / <span id="step-total">0</span></div>
+  </div>
+
+  <main class="stage" id="stage">
+    <section class="diagram-pane" id="diagram-pane">
+      <div class="participants" id="participants"></div>
+      <svg class="lanes" id="lanes"></svg>
+    </section>
+    <aside class="log-pane">
+      <h3>実行ログ</h3>
+      <ol class="log-list" id="log-list"></ol>
+    </aside>
+  </main>
+
+  <div class="detail empty" id="detail">
+    <p class="step-kicker">STEP DETAIL</p>
+    <p>上のトランスポートで「再生」を押すか、右の実行ログをクリックしてステップを選ぶ。</p>
+  </div>
+
+  <section class="overview-grid" id="overview" hidden></section>
+
+  <footer>実装（<code>src/</code>）から起こした参考資料。実装を変更したらこの図もあわせて更新すること。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function esc(str){
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function actorIcon(){
+    return '<svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="6" r="3.2"/><path d="M5 21c0-4.4 3.1-7.5 7-7.5s7 3.1 7 7.5"/></svg>';
+  }
+  function storeIcon(){
+    return '<svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.6"/><path d="M4.5 5.5v13c0 1.4 3.4 2.6 7.5 2.6s7.5-1.2 7.5-2.6v-13"/><path d="M4.5 12c0 1.4 3.4 2.6 7.5 2.6s7.5-1.2 7.5-2.6"/></svg>';
+  }
+
+  // ---- flow data -------------------------------------------------------
+  var FLOWS = {
+    boot: {
+      category: '起動', title: '起動時の初期化',
+      trigger: 'ページを開く（Appのマウント）',
+      description: 'useMasterDataAccessのuseEffectが起点。完了するまでDataAccessGateが全画面の操作をブロックする（design.md §4.8）。',
+      participants: [
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'app', label:'App', code:'src/App.tsx'},
+        {id:'hook', label:'useMasterDataAccess', code:'useMasterDataAccess.ts'},
+        {id:'schema', label:'loadTableDefinitions', code:'core/schema/'},
+        {id:'init', label:'initMasterDataAccess', code:'core/dao/'},
+        {id:'opendb', label:'openMasterDb', code:'core/dao/openMasterDb.ts'},
+        {id:'idb', label:'IndexedDB', kind:'store'},
+        {id:'ls', label:'localStorage', kind:'store'},
+        {id:'exportloader', label:'loadExportDefinitions', code:'core/export/'},
+        {id:'gate', label:'DataAccessGate', code:'screens/DataAccessGate.tsx'},
+      ],
+      steps: [
+        {from:'user',to:'app',kind:'call',label:'ページを開く'},
+        {from:'app',to:'hook',kind:'call',label:'マウント（useEffect発火）'},
+        {from:'hook',to:'schema',kind:'call',label:'table-definitions/*.json を fetch'},
+        {from:'schema',to:'hook',kind:'return',label:'{ definitions, errors }（検証済み）'},
+        {from:'hook',to:'init',kind:'call',label:'initMasterDataAccess(definitions)'},
+        {from:'init',to:'opendb',kind:'call',label:'openMasterDb(definitions)'},
+        {from:'opendb',to:'opendb',kind:'self',label:'computeDefinitionsHash(definitions)'},
+        {from:'opendb',to:'ls',kind:'call',label:'保存済みhashと比較'},
+        {from:'opendb',to:'idb',kind:'call',label:'deleteDB（既存データを全削除）',
+          band:{id:'cond', label:'条件分岐：hashが変化している場合のみ実行', tone:'warn'}},
+        {from:'opendb',to:'idb',kind:'call',label:'openDB（upgradeでobjectStore作成）'},
+        {from:'opendb',to:'ls',kind:'call',label:'新しいhashを保存'},
+        {from:'opendb',to:'init',kind:'return',label:'{ db, rebuilt }'},
+        {from:'init',to:'init',kind:'self',label:'definition毎に createMasterDao / createImportLogDao'},
+        {from:'init',to:'hook',kind:'return',label:'MasterDataAccess'},
+        {from:'hook',to:'exportloader',kind:'call',label:'export-definitions/*.json を fetch'},
+        {from:'exportloader',to:'exportloader',kind:'self',label:'validateExportDefinition（tableDefinitionsと突合）'},
+        {from:'exportloader',to:'hook',kind:'return',label:'{ exportDefinitions, errors }'},
+        {from:'hook',to:'app',kind:'return',label:"state = 'ready'"},
+        {from:'app',to:'gate',kind:'call',label:'各画面の描画を許可'},
+        {from:'gate',to:'user',kind:'return',label:'画面操作可能になる（変更検知時は警告表示）'},
+      ]
+    },
+    'import': {
+      category: 'CSV取込', title: 'CSV取込（SCR-1）',
+      trigger:'「取込実行」→ 確認ダイアログで確定',
+      description:'パース・バリデーション・Upsertは全てWeb Worker上で行い、メインスレッドをブロックしない（DO-3）。バリデーションは①型→②NotNull→③長さ→④定数→⑤ユニークの順を厳守。',
+      participants: [
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'screen', label:'ImportScreen', code:'screens/ImportScreen.tsx'},
+        {id:'confirm', label:'ConfirmDialog', code:'components/ConfirmDialog.tsx'},
+        {id:'worker', label:'csvImport.worker', code:'workers/csvImport.worker.ts'},
+        {id:'importcsv', label:'importCsvFile', code:'workers/importCsvFile.ts'},
+        {id:'validate', label:'validateRow', code:'core/validation/'},
+        {id:'dao', label:'masterDao', code:'core/dao/dao.ts'},
+        {id:'logdao', label:'importLogDao', code:'core/dao/importLogDao.ts'},
+      ],
+      steps: [
+        {from:'user',to:'screen',kind:'call',label:'ファイル選択 ＋「取込実行」クリック'},
+        {from:'screen',to:'confirm',kind:'call',label:'確認ダイアログを表示'},
+        {from:'user',to:'confirm',kind:'call',label:'「取込を実行する」をクリック'},
+        {from:'confirm',to:'screen',kind:'return',label:'onConfirm(executeImport)'},
+        {from:'screen',to:'worker',kind:'call',label:'new Worker() + postMessage(request)'},
+        {from:'worker',to:'worker',kind:'self',label:'openDB（構築済みのDBへ接続）'},
+        {from:'worker',to:'worker',kind:'self',label:'createMasterDao / createImportLogDao'},
+        {from:'worker',to:'worker',kind:'self',label:'file.text()'},
+        {from:'worker',to:'importcsv',kind:'call',label:'importCsvFile({ definition, csvText, ... })'},
+        {from:'importcsv',to:'logdao',kind:'call',label:'save(baseLog: status = RUNNING)'},
+        {from:'importcsv',to:'importcsv',kind:'self',label:'Papa.parse(csvText, { header: true })'},
+        {from:'importcsv',to:'dao',kind:'call',label:'findAll()（ユニーク制約チェック用の既存値取得）'},
+        {from:'importcsv',to:'validate',kind:'call',label:'validateRow(rawRow, uniqueContexts)',
+          band:{id:'rowloop', label:'🔁 loop：CSVの行ごとに繰り返す', tone:'default'}},
+        {from:'validate',to:'validate',kind:'self',label:'①型→②NotNull→③長さ→④定数→⑤ユニーク',
+          band:{id:'rowloop', label:'🔁 loop：CSVの行ごとに繰り返す', tone:'default'}},
+        {from:'validate',to:'importcsv',kind:'return',label:'record（全カラム通過）', branch:'ok',
+          band:{id:'rowloop', label:'🔁 loop：CSVの行ごとに繰り返す', tone:'default'}},
+        {from:'importcsv',to:'dao',kind:'call',label:'upsert(record)', branch:'ok',
+          band:{id:'rowloop', label:'🔁 loop：CSVの行ごとに繰り返す', tone:'default'}},
+        {from:'validate',to:'importcsv',kind:'return',label:'errors（該当カラムで判定を打ち切り）', branch:'err',
+          band:{id:'rowloop', label:'🔁 loop：CSVの行ごとに繰り返す', tone:'default'}},
+        {from:'importcsv',to:'importcsv',kind:'self',label:'この行はスキップして次の行へ', branch:'err',
+          band:{id:'rowloop', label:'🔁 loop：CSVの行ごとに繰り返す', tone:'default'}},
+        {from:'importcsv',to:'logdao',kind:'call',label:'save(finalLog: COMPLETED / COMPLETED_WITH_ERRORS / FAILED)'},
+        {from:'importcsv',to:'worker',kind:'return',label:'log'},
+        {from:'worker',to:'screen',kind:'call',label:'postMessage(importResult, log)'},
+        {from:'screen',to:'user',kind:'return',label:'取込結果サマリを表示'},
+      ]
+    },
+    'search-mount': {
+      category:'マスタ検索', title:'マスタ検索：テーブル切替 / 画面表示時',
+      trigger:'テーブルのプルダウンを切替、または画面を開く',
+      description:'訪問・切替のたびに最新のIndexedDBの内容を取得し直す。',
+      participants:[
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'screen', label:'SearchExportScreen', code:'screens/SearchExportScreen.tsx'},
+        {id:'dao', label:'masterDao', code:'core/dao/dao.ts'},
+        {id:'idb', label:'IndexedDB', kind:'store'},
+      ],
+      steps:[
+        {from:'user',to:'screen',kind:'call',label:'テーブル切替 / 画面表示'},
+        {from:'screen',to:'dao',kind:'call',label:'findAll()'},
+        {from:'dao',to:'idb',kind:'call',label:'getAll(tableId)'},
+        {from:'idb',to:'dao',kind:'return',label:'全レコード'},
+        {from:'dao',to:'screen',kind:'return',label:'records'},
+        {from:'screen',to:'user',kind:'return',label:'一覧を再描画'},
+      ]
+    },
+    'search-query': {
+      category:'マスタ検索', title:'マスタ検索：検索実行',
+      trigger:'検索条件を入力して「検索」をクリック',
+      description:'文字列は部分一致、それ以外は完全一致。数値/真偽値に変換できない条件は無視して検索を続ける。',
+      participants:[
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'screen', label:'SearchExportScreen', code:'screens/SearchExportScreen.tsx'},
+        {id:'dao', label:'masterDao', code:'core/dao/dao.ts'},
+        {id:'idb', label:'IndexedDB', kind:'store'},
+      ],
+      steps:[
+        {from:'user',to:'screen',kind:'call',label:'検索条件入力 →「検索」クリック'},
+        {from:'screen',to:'screen',kind:'self',label:'handleSearch()：parseSearchValueで型変換'},
+        {from:'screen',to:'dao',kind:'call',label:'search(criteria)'},
+        {from:'dao',to:'idb',kind:'call',label:'getAll(tableId)'},
+        {from:'idb',to:'dao',kind:'return',label:'全レコード'},
+        {from:'dao',to:'dao',kind:'self',label:'部分一致 / 完全一致でフィルタ'},
+        {from:'dao',to:'screen',kind:'return',label:'該当records'},
+        {from:'screen',to:'user',kind:'return',label:'一覧再描画（無視した条件は警告表示）'},
+      ]
+    },
+    'search-clear': {
+      category:'マスタ検索', title:'マスタ検索：クリア',
+      trigger:'「クリア（全件表示）」をクリック',
+      description:'検索条件欄をリセットし、そのテーブルの全件を再取得する。',
+      participants:[
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'screen', label:'SearchExportScreen', code:'screens/SearchExportScreen.tsx'},
+        {id:'dao', label:'masterDao', code:'core/dao/dao.ts'},
+        {id:'idb', label:'IndexedDB', kind:'store'},
+      ],
+      steps:[
+        {from:'user',to:'screen',kind:'call',label:'「クリア（全件表示）」クリック'},
+        {from:'screen',to:'dao',kind:'call',label:'findAll()'},
+        {from:'dao',to:'idb',kind:'call',label:'getAll(tableId)'},
+        {from:'idb',to:'dao',kind:'return',label:'全レコード'},
+        {from:'dao',to:'screen',kind:'return',label:'records'},
+        {from:'screen',to:'user',kind:'return',label:'一覧再描画（検索条件欄もリセット）'},
+      ]
+    },
+    'download-all': {
+      category:'ファイル出力', title:'CSVダウンロード（全カラム・DO-7）',
+      trigger:'「ダウンロード」をクリック',
+      description:'ヘッダーをcolumnIdにし、取込画面（SCR-1）へそのまま再取込できる形式で出力する。',
+      participants:[
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'screen', label:'SearchExportScreen', code:'screens/SearchExportScreen.tsx'},
+        {id:'build', label:'buildAllColumnsCsv', code:'screens内の関数'},
+        {id:'papa', label:'Papa.unparse', code:'papaparse'},
+        {id:'download', label:'downloadCsvText', code:'screens内の関数'},
+        {id:'browser', label:'ブラウザ', kind:'store'},
+      ],
+      steps:[
+        {from:'user',to:'screen',kind:'call',label:'「ダウンロード」クリック'},
+        {from:'screen',to:'build',kind:'call',label:'buildAllColumnsCsv(definition, records)'},
+        {from:'build',to:'papa',kind:'call',label:'Papa.unparse(rows)'},
+        {from:'papa',to:'build',kind:'return',label:'CSV文字列'},
+        {from:'build',to:'screen',kind:'return',label:'csvBody'},
+        {from:'screen',to:'download',kind:'call',label:'downloadCsvText(fileName, csvBody)'},
+        {from:'download',to:'download',kind:'self',label:'BOM付与 + Blob生成 + createObjectURL()'},
+        {from:'download',to:'browser',kind:'call',label:'ダウンロード用のリンク要素を生成しclick()を呼ぶ'},
+        {from:'download',to:'download',kind:'self',label:'revokeObjectURL()'},
+        {from:'screen',to:'user',kind:'return',label:'「ダウンロードを開始しました」表示'},
+      ]
+    },
+    'download-export': {
+      category:'ファイル出力', title:'連携ファイル出力（DO-8）',
+      trigger:'連携ファイル定義を選択 →「この定義で出力」をクリック',
+      description:'決められた出力カラム・ヘッダー名・区切り文字・改行コードに変換して出力する。',
+      participants:[
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'screen', label:'SearchExportScreen', code:'screens/SearchExportScreen.tsx'},
+        {id:'build', label:'buildExportCsv', code:'core/export/buildExportCsv.ts'},
+        {id:'papa', label:'Papa.unparse', code:'papaparse'},
+        {id:'download', label:'downloadCsvText', code:'screens内の関数'},
+        {id:'browser', label:'ブラウザ', kind:'store'},
+      ],
+      steps:[
+        {from:'user',to:'screen',kind:'call',label:'連携ファイル定義選択 →「この定義で出力」クリック'},
+        {from:'screen',to:'build',kind:'call',label:'buildExportCsv(selectedExportDefinition, records)'},
+        {from:'build',to:'papa',kind:'call',label:'Papa.unparse(rows, { delimiter, newline })'},
+        {from:'papa',to:'build',kind:'return',label:'CSV / TSV文字列'},
+        {from:'build',to:'screen',kind:'return',label:'csvBody'},
+        {from:'screen',to:'download',kind:'call',label:'downloadCsvText(fileName, csvBody)'},
+        {from:'download',to:'download',kind:'self',label:'BOM付与 + Blob生成 + createObjectURL()'},
+        {from:'download',to:'browser',kind:'call',label:'ダウンロード用のリンク要素を生成しclick()を呼ぶ'},
+        {from:'download',to:'download',kind:'self',label:'revokeObjectURL()'},
+        {from:'screen',to:'user',kind:'return',label:'「ダウンロードを開始しました」表示'},
+      ]
+    },
+    'importlog': {
+      category:'取込ログ', title:'取込実行ログ表示（SCR-3）',
+      trigger:'画面表示 / 「更新」クリック / 「詳細を見る」クリック',
+      description:'取込バッチ単位のログのみ対象（DONT-7）。詳細表示は再フェッチせず取得済みのlogsから参照する。',
+      participants:[
+        {id:'user', label:'ユーザー', kind:'actor'},
+        {id:'screen', label:'ImportLogScreen', code:'screens/ImportLogScreen.tsx'},
+        {id:'logdao', label:'importLogDao', code:'core/dao/importLogDao.ts'},
+        {id:'idb', label:'IndexedDB', kind:'store'},
+      ],
+      steps:[
+        {from:'user',to:'screen',kind:'call',label:'画面表示 または「更新」クリック'},
+        {from:'screen',to:'screen',kind:'self',label:'refresh()'},
+        {from:'screen',to:'logdao',kind:'call',label:'findAll()'},
+        {from:'logdao',to:'idb',kind:'call',label:'getAll(import_logs)'},
+        {from:'idb',to:'logdao',kind:'return',label:'全取込ログ'},
+        {from:'logdao',to:'screen',kind:'return',label:'logs'},
+        {from:'screen',to:'screen',kind:'self',label:'startedAt降順にソート'},
+        {from:'screen',to:'user',kind:'return',label:'一覧を再描画'},
+        {from:'user',to:'screen',kind:'call',label:'「詳細を見る」クリック'},
+        {from:'screen',to:'screen',kind:'self',label:'setSelectedImportId(importId)'},
+        {from:'screen',to:'user',kind:'return',label:'エラー明細を表示（再フェッチなし）'},
+      ]
+    }
+  };
+
+  var CATS = ['起動','CSV取込','マスタ検索','ファイル出力','取込ログ'];
+  var ORDER = ['boot','import','search-mount','search-query','search-clear','download-all','download-export','importlog'];
+
+  var OVERVIEW = [
+    {title:'画面', path:'src/screens/', items:['SCR-1 ImportScreen（CSV取込）','SCR-2 SearchExportScreen（検索・出力）','SCR-3 ImportLogScreen（取込ログ）'], deps:'core/dao・core/export のみを通してアクセス。IndexedDBを直接は叩かない'},
+    {title:'起動時初期化', path:'useMasterDataAccess.ts', items:['table-definitions/*.json を fetch','IndexedDBスキーマ・DAOを実行時構築','export-definitions/*.json を fetch'], deps:'core/schema・core/dao・core/export を呼び出す'},
+    {title:'Web Worker', path:'src/workers/', items:['csvImport.worker.ts（薄いラッパー）','importCsvFile.ts（パース・検証・Upsertの中核）'], deps:'core/dao・core/validation を呼び出す。UIスレッドはブロックしない'},
+    {title:'ドメインロジック', path:'src/core/', items:['schema/ 定義の型・読込・検証','dao/ 動的DAO生成・IndexedDB','validation/ ①〜⑤の5手順','export/ 連携ファイル定義・CSV生成'], deps:'画面・Workerから共通で利用される唯一のロジック集約先'},
+    {title:'ブラウザストレージ', path:'IndexedDB / localStorage', items:['マスタデータ・取込ログの永続化（IndexedDB）','定義JSONのハッシュのみ保存（localStorage）'], deps:'バックエンドサーバーは持たない構成'},
+  ];
+
+  // ---- state -------------------------------------------------------------
+  var state = { flowKey:null, index:-1, playing:false, timer:null };
+
+  var picker = document.getElementById('picker');
+  var brief = document.getElementById('brief');
+  var transport = document.getElementById('transport');
+  var stage = document.getElementById('stage');
+  var overviewEl = document.getElementById('overview');
+  var participantsEl = document.getElementById('participants');
+  var svg = document.getElementById('lanes');
+  var logList = document.getElementById('log-list');
+  var detail = document.getElementById('detail');
+  var stepNow = document.getElementById('step-now');
+  var stepTotal = document.getElementById('step-total');
+
+  var COLW = 168, BOXW = 132, HEADERH = 60, ROWH = 56, TOPPAD = 30, MARGIN = 24;
+
+  function buildPicker(){
+    CATS.forEach(function(cat){
+      var row = document.createElement('div');
+      row.className = 'picker-row';
+      var label = document.createElement('span');
+      label.className = 'cat';
+      label.textContent = cat;
+      row.appendChild(label);
+      ORDER.filter(function(k){ return FLOWS[k].category === cat; }).forEach(function(k){
+        var btn = document.createElement('button');
+        btn.className = 'chip';
+        btn.type = 'button';
+        btn.setAttribute('aria-pressed','false');
+        btn.textContent = FLOWS[k].title.replace(/^.*?：/,'').replace(/（.*/,'');
+        btn.addEventListener('click', function(){ selectFlow(k); });
+        btn.dataset.key = k;
+        row.appendChild(btn);
+      });
+      picker.appendChild(row);
+    });
+    var ovRow = document.createElement('div');
+    ovRow.className = 'picker-row';
+    var ovLabel = document.createElement('span');
+    ovLabel.className = 'cat';
+    ovLabel.textContent = '俯瞰';
+    ovRow.appendChild(ovLabel);
+    var ovBtn = document.createElement('button');
+    ovBtn.className = 'chip';
+    ovBtn.type = 'button';
+    ovBtn.textContent = '全体構成';
+    ovBtn.dataset.key = 'overview';
+    ovBtn.addEventListener('click', function(){ selectFlow('overview'); });
+    ovRow.appendChild(ovBtn);
+    picker.insertBefore(ovRow, picker.firstChild);
+  }
+
+  function buildOverview(){
+    OVERVIEW.forEach(function(card){
+      var el = document.createElement('div');
+      el.className = 'ocard';
+      var ul = card.items.map(function(i){ return '<li>'+esc(i)+'</li>'; }).join('');
+      el.innerHTML =
+        '<h3>'+esc(card.title)+'</h3>' +
+        '<span class="path">'+esc(card.path)+'</span>' +
+        '<ul>'+ul+'</ul>' +
+        '<div class="deps"><b>依存 →</b> '+esc(card.deps)+'</div>';
+      overviewEl.appendChild(el);
+    });
+  }
+
+  function setPressed(key){
+    Array.prototype.forEach.call(picker.querySelectorAll('.chip'), function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.key === key));
+    });
+  }
+
+  function selectFlow(key){
+    stopPlaying();
+    setPressed(key);
+    if(key === 'overview'){
+      state.flowKey = 'overview';
+      stage.hidden = true;
+      transport.style.visibility = 'hidden';
+      overviewEl.hidden = false;
+      brief.innerHTML =
+        '<p class="trigger">俯瞰図</p>' +
+        '<h2>全体構成（静的な依存関係）</h2>' +
+        '<p>画面・起動時初期化・Web Worker・ドメインロジック・ブラウザストレージの5層。各カードの「依存 →」がそのモジュールから何を呼び出すかを示す。動的な呼び出し順は上のカテゴリからイベントを選んで確認する。</p>';
+      detail.className = 'detail empty';
+      detail.innerHTML = '<p class="step-kicker">STEP DETAIL</p><p>「俯瞰」は静的な構成図。呼び出し順序のステップ再生は他のイベントを選択すること。</p>';
+      return;
+    }
+    state.flowKey = key;
+    state.index = -1;
+    stage.hidden = false;
+    transport.style.visibility = 'visible';
+    overviewEl.hidden = true;
+    var flow = FLOWS[key];
+    brief.innerHTML =
+      '<p class="trigger">発火イベント：'+esc(flow.trigger)+'</p>' +
+      '<h2>'+esc(flow.title)+'</h2>' +
+      '<p>'+esc(flow.description)+'</p>';
+    renderDiagram(flow);
+    renderLog(flow);
+    updateStep();
+  }
+
+  // ---- layout --------------------------------------------------------
+  function layout(flow){
+    var xs = {};
+    flow.participants.forEach(function(p, i){ xs[p.id] = MARGIN + BOXW/2 + i*COLW; });
+    var width = MARGIN*2 + BOXW + (flow.participants.length-1)*COLW;
+
+    // merge consecutive same-id bands
+    var bands = [];
+    flow.steps.forEach(function(s, i){
+      if(!s.band) return;
+      var last = bands[bands.length-1];
+      if(last && last.id === s.band.id && last.end === i-1){ last.end = i; }
+      else { bands.push({id:s.band.id, label:s.band.label, tone:s.band.tone, start:i, end:i}); }
+    });
+
+    // activation stack per participant
+    var openStack = {};
+    var activations = [];
+    flow.steps.forEach(function(s, i){
+      if(s.kind === 'call' && s.from !== s.to){
+        openStack[s.to] = openStack[s.to] || [];
+        openStack[s.to].push(i);
+      } else if(s.kind === 'return' && s.from !== s.to){
+        var st = openStack[s.from];
+        if(st && st.length){
+          var start = st.pop();
+          activations.push({pid:s.from, start:start, end:i});
+        }
+      }
+    });
+    Object.keys(openStack).forEach(function(pid){
+      (openStack[pid]||[]).forEach(function(start){
+        activations.push({pid:pid, start:start, end:flow.steps.length-1});
+      });
+    });
+
+    var height = TOPPAD + flow.steps.length*ROWH + 20;
+    return {xs:xs, width:width, height:height, bands:bands, activations:activations};
+  }
+
+  function rowY(i){ return TOPPAD + i*ROWH; }
+
+  function svgEl(tag, attrs){
+    var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for(var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function renderDiagram(flow){
+    var L = layout(flow);
+
+    participantsEl.innerHTML = '';
+    participantsEl.style.height = HEADERH + 'px';
+    participantsEl.style.width = L.width + 'px';
+    flow.participants.forEach(function(p){
+      var box = document.createElement('div');
+      box.className = 'pbox' + (p.kind === 'actor' ? ' actor' : '');
+      box.style.left = (L.xs[p.id] - BOXW/2) + 'px';
+      var icon = p.kind === 'actor' ? actorIcon() : (p.kind === 'store' ? storeIcon() : '');
+      box.innerHTML =
+        '<div class="card">' + icon +
+        '<span class="name">'+esc(p.label)+'</span>' +
+        (p.code ? '<code class="code">'+esc(p.code)+'</code>' : '') +
+        '</div>';
+      participantsEl.appendChild(box);
+    });
+
+    svg.innerHTML = '';
+    svg.setAttribute('width', L.width);
+    svg.setAttribute('height', L.height);
+    svg.setAttribute('viewBox', '0 0 '+L.width+' '+L.height);
+
+    var defs = svgEl('defs', {});
+    ['accent','ink-soft','accent-2','ok','err'].forEach(function(name){
+      var m = svgEl('marker', {id:'arrow-'+name, viewBox:'0 0 10 10', refX:'8', refY:'5', markerWidth:'7', markerHeight:'7', orient:'auto-start-reverse'});
+      var path = svgEl('path', {d:'M0,0 L10,5 L0,10 z'});
+      path.style.fill = 'var(--'+name+')';
+      m.appendChild(path);
+      defs.appendChild(m);
+    });
+    svg.appendChild(defs);
+
+    flow.participants.forEach(function(p){
+      svg.appendChild(svgEl('line', {
+        class:'lifeline', x1:L.xs[p.id], y1:0, x2:L.xs[p.id], y2:L.height
+      }));
+    });
+
+    L.bands.forEach(function(b){
+      var y1 = rowY(b.start) - 22, y2 = rowY(b.end) + 22;
+      var rect = svgEl('rect', {
+        class:'band' + (b.tone === 'warn' ? ' tone-warn' : ''),
+        x:10, y:y1, width:L.width-20, height:y2-y1, rx:10,
+        'data-start':b.start
+      });
+      svg.appendChild(rect);
+      var text = svgEl('text', {class:'band-label', x:20, y:y1+13, 'data-start':b.start});
+      text.textContent = b.label;
+      svg.appendChild(text);
+    });
+
+    L.activations.forEach(function(a){
+      var x = L.xs[a.pid];
+      var y1 = rowY(a.start) - 14, y2 = rowY(a.end) + 14;
+      svg.appendChild(svgEl('rect', {
+        class:'activation', x:x-8, y:y1, width:16, height:y2-y1, rx:3,
+        'data-start':a.start, 'data-end':a.end
+      }));
+    });
+
+    flow.steps.forEach(function(s, i){
+      var g = svgEl('g', {class:'msg kind-'+s.kind + (s.branch ? ' branch-'+s.branch : ''), 'data-step':i});
+      var y = rowY(i);
+      var color = s.branch === 'ok' ? 'ok' : s.branch === 'err' ? 'err' : s.kind === 'return' ? 'ink-soft' : s.kind === 'self' ? 'accent-2' : 'accent';
+
+      if(s.kind === 'self'){
+        var x0 = L.xs[s.from];
+        var d = 'M '+x0+' '+(y-9)+' H '+(x0+38)+' V '+(y+9)+' H '+x0;
+        var path = svgEl('path', {class:'path', d:d, 'marker-end':'url(#arrow-'+color+')'});
+        g.appendChild(path);
+        var bg = svgEl('rect', {class:'bg', x:x0+44, y:y-11, width: Math.max(60, s.label.length*6.1), height:20});
+        g.appendChild(bg);
+        var t = svgEl('text', {class:'label', x:x0+48, y:y+4});
+        t.textContent = s.label;
+        g.appendChild(t);
+      } else {
+        var xa = L.xs[s.from], xb = L.xs[s.to];
+        var line = svgEl('line', {class:'path', x1:xa, y1:y, x2:xb, y2:y, 'marker-end':'url(#arrow-'+color+')'});
+        g.appendChild(line);
+        var mid = (xa+xb)/2;
+        var bg2 = svgEl('rect', {class:'bg', x:mid-Math.min(140, s.label.length*3.6), y:y-21, width:Math.min(280, s.label.length*7.2), height:16});
+        g.appendChild(bg2);
+        var label = svgEl('text', {class:'label', x:mid, y:y-9, 'text-anchor':'middle'});
+        label.textContent = s.label;
+        g.appendChild(label);
+        var dot = svgEl('circle', {class:'dot', cx:xb, cy:y, r:3});
+        g.appendChild(dot);
+      }
+      svg.appendChild(g);
+    });
+  }
+
+  function renderLog(flow){
+    logList.innerHTML = '';
+    flow.steps.forEach(function(s, i){
+      var li = document.createElement('li');
+      var btn = document.createElement('button');
+      btn.className = 'log-item';
+      btn.type = 'button';
+      btn.dataset.step = i;
+      var arrow = s.kind === 'return' ? '⇠' : s.kind === 'self' ? '↺' : '→';
+      var toLabel = s.kind === 'self' ? '' : ' <span class="arrow">'+arrow+'</span> ' + esc(labelOf(flow, s.to));
+      var branchBadge = s.branch ? ' <span class="badge '+s.branch+'">'+(s.branch==='ok'?'成功時':'エラー時')+'</span>' : '';
+      btn.innerHTML =
+        '<span class="row1"><span class="num">#'+(i+1)+'</span>'+esc(labelOf(flow, s.from))+toLabel+branchBadge+'</span>' +
+        '<span class="text">'+esc(s.label)+'</span>';
+      btn.addEventListener('click', function(){ stopPlaying(); state.index = i; updateStep(); });
+      li.appendChild(btn);
+      logList.appendChild(li);
+    });
+  }
+
+  function labelOf(flow, id){
+    var p = flow.participants.filter(function(p){ return p.id === id; })[0];
+    return p ? p.label : id;
+  }
+
+  function updateStep(){
+    var flow = FLOWS[state.flowKey];
+    if(!flow) return;
+    var idx = state.index;
+    stepNow.textContent = String(idx+1);
+    stepTotal.textContent = String(flow.steps.length);
+
+    Array.prototype.forEach.call(svg.querySelectorAll('.msg'), function(el){
+      var s = parseInt(el.dataset.step, 10);
+      el.style.opacity = s <= idx ? '1' : '0';
+      el.classList.toggle('current', s === idx);
+    });
+    Array.prototype.forEach.call(svg.querySelectorAll('.activation'), function(el){
+      var s = parseInt(el.dataset.start, 10), e = parseInt(el.dataset.end, 10);
+      el.style.opacity = s <= idx ? '1' : '0';
+      el.classList.toggle('open', s <= idx && idx < e);
+    });
+    Array.prototype.forEach.call(svg.querySelectorAll('[data-start]'), function(el){
+      if(el.classList.contains('activation')) return;
+      var s = parseInt(el.dataset.start, 10);
+      el.style.opacity = s <= idx ? '1' : '0';
+    });
+
+    Array.prototype.forEach.call(logList.querySelectorAll('.log-item'), function(el){
+      var s = parseInt(el.dataset.step, 10);
+      el.classList.toggle('seen', s <= idx);
+      el.classList.toggle('current', s === idx);
+    });
+
+    var currentLi = logList.querySelector('.log-item.current');
+    if(currentLi) currentLi.scrollIntoView({block:'nearest', behavior: reduceMotion ? 'auto' : 'smooth'});
+    var currentG = svg.querySelector('.msg.current');
+    if(currentG) currentG.scrollIntoView && currentG.scrollIntoView({block:'nearest', behavior: reduceMotion ? 'auto' : 'smooth'});
+
+    if(idx < 0){
+      detail.className = 'detail empty';
+      detail.innerHTML = '<p class="step-kicker">STEP DETAIL</p><p>「再生」を押すか、実行ログの行をクリックしてステップを選ぶ。</p>';
+    } else {
+      var s = flow.steps[idx];
+      var arrow = s.kind === 'return' ? '戻り値 ⇠' : s.kind === 'self' ? '内部処理 ↺' : '呼び出し →';
+      var line = s.kind === 'self' ? labelOf(flow,s.from) : labelOf(flow,s.from) + '  →  ' + labelOf(flow,s.to);
+      detail.className = 'detail';
+      detail.innerHTML =
+        '<p class="step-kicker">STEP '+(idx+1)+' / '+flow.steps.length+' — '+arrow+(s.branch?'（'+(s.branch==='ok'?'成功時':'エラー時')+'）':'')+'</p>' +
+        '<p class="flow-line">'+esc(line)+'</p>' +
+        '<p>'+esc(s.label)+'</p>';
+    }
+
+    var atEnd = idx >= flow.steps.length - 1;
+    document.getElementById('btn-fwd').disabled = atEnd;
+    document.getElementById('btn-back').disabled = idx <= -1;
+    if(atEnd) stopPlaying();
+  }
+
+  function stepForward(){
+    var flow = FLOWS[state.flowKey];
+    if(!flow) return;
+    if(state.index >= flow.steps.length - 1){ stopPlaying(); return; }
+    state.index++;
+    updateStep();
+  }
+  function stepBack(){
+    if(state.index <= -1) return;
+    state.index--;
+    updateStep();
+  }
+  function reset(){
+    stopPlaying();
+    state.index = -1;
+    updateStep();
+  }
+  function stopPlaying(){
+    state.playing = false;
+    if(state.timer){ clearInterval(state.timer); state.timer = null; }
+    document.getElementById('btn-play').textContent = '▶ 再生';
+  }
+  function togglePlay(){
+    if(!state.flowKey || state.flowKey === 'overview') return;
+    if(state.playing){ stopPlaying(); return; }
+    state.playing = true;
+    document.getElementById('btn-play').textContent = '⏸ 一時停止';
+    var speed = parseInt(document.getElementById('speed').value, 10);
+    state.timer = setInterval(function(){
+      var flow = FLOWS[state.flowKey];
+      if(state.index >= flow.steps.length - 1){ stopPlaying(); return; }
+      stepForward();
+    }, speed);
+  }
+
+  document.getElementById('btn-play').addEventListener('click', togglePlay);
+  document.getElementById('btn-fwd').addEventListener('click', function(){ stopPlaying(); stepForward(); });
+  document.getElementById('btn-back').addEventListener('click', function(){ stopPlaying(); stepBack(); });
+  document.getElementById('btn-reset').addEventListener('click', reset);
+  document.getElementById('speed').addEventListener('input', function(){
+    if(state.playing){ togglePlay(); togglePlay(); }
+  });
+  window.addEventListener('keydown', function(e){
+    if(!state.flowKey || state.flowKey === 'overview') return;
+    if(e.key === 'ArrowRight'){ stopPlaying(); stepForward(); }
+    if(e.key === 'ArrowLeft'){ stopPlaying(); stepBack(); }
+    if(e.key === ' ' && e.target === document.body){ e.preventDefault(); togglePlay(); }
+  });
+
+  buildPicker();
+  buildOverview();
+  selectFlow('boot');
+})();
+</script>
