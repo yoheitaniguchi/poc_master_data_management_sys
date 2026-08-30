@@ -48,10 +48,14 @@ afterEach(async () => {
 // 定義だけを差し替えて再初期化し、importCsvFile・validateRow等のコードを一切変更せずに
 // 新しい制約でCSV取込が動作することを検証する。
 describe('EFFECT-2: バリデーション値の変更のみで新しい制約が反映される（要求仕様書§1.2）', () => {
-  it('maxLengthを緩和すると、以前は長さ超過エラーだった値がコード変更なしに取込可能になる', async () => {
+  it('maxLengthを緩和すると、以前は長さ超過エラーだった値がコード変更なしに取込可能になる（ただし既存データはdocs/design.md §4.3の方針により失われる）', async () => {
     const storage = createMemoryStorage()
     access = await initMasterDataAccess([baseItemDef], { storage })
     const dao = access.daos.get('m_item')!
+
+    // 制約変更前の時点で、既に正常に登録済みのレコードを1件用意しておく（制約変更後に
+    // このレコードがどうなるかを後段で確認するため）
+    await dao.upsert({ item_code: 'X999', item_name: '既存品', item_type: '完成品' })
 
     const csvText = ['item_code,item_name,item_type', 'A001,超長い品目名です,完成品'].join('\n')
 
@@ -88,6 +92,12 @@ describe('EFFECT-2: バリデーション値の変更のみで新しい制約が
       item_name: '超長い品目名です',
       item_type: '完成品',
     })
+
+    // docs/design.md §4.3: 定義JSON群のハッシュが変わるとDBは削除・再作成されるため、
+    // 制約変更とは無関係だった既存レコード（X999）もろとも失われる。EFFECT-2は
+    // 「新しい制約でCSV取込が動作すること」を保証するものであり、既存データの保持を
+    // 保証するものではない（App.tsxがrebuilt通知バナーでユーザーに警告する副作用）。
+    expect(await daoAfter.findByKey('X999')).toBeUndefined()
   })
 
   it('constantsに値を追加すると、以前は定数リスト外エラーだった値がコード変更なしに取込可能になる', async () => {
@@ -131,5 +141,27 @@ describe('EFFECT-2: バリデーション値の変更のみで新しい制約が
     })
     expect(logAfter.status).toBe('COMPLETED')
     expect(await daoAfter.findByKey('A001')).toEqual({ item_code: 'A001', item_name: 'ボルト', item_type: '資材' })
+  })
+
+  it('制約変更前に登録済みだったレコードは、docs/design.md §4.3のDB再作成により失われる', async () => {
+    const storage = createMemoryStorage()
+    access = await initMasterDataAccess([baseItemDef], { storage })
+    const dao = access.daos.get('m_item')!
+    await dao.upsert({ item_code: 'X999', item_name: '既存品', item_type: '完成品' })
+    expect(await dao.findByKey('X999')).toBeDefined()
+
+    const expandedDef: TableDefinition = {
+      ...baseItemDef,
+      columns: [
+        baseItemDef.columns[0],
+        baseItemDef.columns[1],
+        { ...baseItemDef.columns[2], constants: ['完成品', '半製品', '原材料', '資材'] },
+      ],
+    }
+    access.db.close()
+    access = await initMasterDataAccess([expandedDef], { storage })
+
+    expect(access.rebuilt).toBe(true)
+    expect(await access.daos.get('m_item')!.findByKey('X999')).toBeUndefined()
   })
 })

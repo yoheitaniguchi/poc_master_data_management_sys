@@ -5,16 +5,23 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { loadTableDefinitions } from '../core/schema/loadTableDefinitions'
 import { initMasterDataAccess } from '../core/dao/masterDataAccess'
 import { DB_NAME } from '../core/dao/openMasterDb'
+import { loadExportDefinitions } from '../core/export/loadExportDefinitions'
 import { importCsvFile } from '../workers/importCsvFile'
 import { createMemoryStorage } from '../test/memoryStorage'
 import type { TableDefinition } from '../core/schema/types'
+import type { ExportDefinition } from '../core/export/types'
 
-// table-definitions/m_item.json・m_partner.jsonを直接読み込む（内容をこのテストファイル内に
-// 複製すると、実ファイルを変更してもテストが追随せず陳腐化するため。実際に配置されている
-// ファイルそのものをloadTableDefinitionsに渡すことで、常に実態を反映したテストにする）。
+// table-definitions/m_item.json・m_partner.json、export-definitions/index.json・
+// item_export_v1.jsonを直接読み込む（内容をこのテストファイル内に複製すると、実ファイルを
+// 変更してもテストが追随せず陳腐化するため。実際に配置されているファイルそのものを
+// loadTableDefinitions/loadExportDefinitionsに渡すことで、常に実態を反映したテストにする）。
 const tableDefinitionsDir = fileURLToPath(new URL('../../table-definitions/', import.meta.url))
 const itemDef: TableDefinition = JSON.parse(readFileSync(`${tableDefinitionsDir}m_item.json`, 'utf-8'))
 const partnerDef: TableDefinition = JSON.parse(readFileSync(`${tableDefinitionsDir}m_partner.json`, 'utf-8'))
+
+const exportDefinitionsDir = fileURLToPath(new URL('../../export-definitions/', import.meta.url))
+const exportIndex = JSON.parse(readFileSync(`${exportDefinitionsDir}index.json`, 'utf-8'))
+const itemExportDef: ExportDefinition = JSON.parse(readFileSync(`${exportDefinitionsDir}item_export_v1.json`, 'utf-8'))
 
 // 要求仕様書§7項番3「単一のテーブル定義でしか動かない実装は…不十分」に基づき、m_item/m_partner
 // のどちらとも異なるカラム構成（boolean/date型を含む）の3件目を「これから追加する新規テーブル」
@@ -51,16 +58,19 @@ afterEach(async () => {
 describe('EFFECT-1: JSON定義ファイルの追加のみで新規マスタテーブルを追加できる（要求仕様書§1.2）', () => {
   it('table-definitions/index.jsonへのtableId追記＋定義JSON追加だけで、取込・検索・出力の基盤（DAO・Worker）に新テーブルが反映される', async () => {
     // 実在するm_item.json/m_partner.jsonに加え、index.jsonへ新しいtableId（m_warehouse）を
-    // 追記し対応する定義JSONを配置した状況を再現する（table-definitions/*.jsonへのfetchのみ
-    // モックし、それ以外はアプリ起動時と全く同じ関数・同じ順序で呼び出す。画面固有のコードは
-    // 一切経由しない）
-    const index = { tableIds: ['m_item', 'm_partner', 'm_warehouse'] }
+    // 追記し対応する定義JSONを配置した状況を再現する。table-definitions/・export-definitions/
+    // 双方へのfetchのみモックし、それ以外はsrc/useMasterDataAccess.tsの起動シーケンス
+    // （loadTableDefinitions→initMasterDataAccess→loadExportDefinitions）と全く同じ関数・
+    // 同じ順序で呼び出す。画面固有のコードは一切経由しない
+    const tableIndex = { tableIds: ['m_item', 'm_partner', 'm_warehouse'] }
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url.endsWith('index.json')) return jsonResponse(index)
-      if (url.endsWith('m_item.json')) return jsonResponse(itemDef)
-      if (url.endsWith('m_partner.json')) return jsonResponse(partnerDef)
-      if (url.endsWith('m_warehouse.json')) return jsonResponse(warehouseDef)
+      if (url.endsWith('table-definitions/index.json')) return jsonResponse(tableIndex)
+      if (url.endsWith('table-definitions/m_item.json')) return jsonResponse(itemDef)
+      if (url.endsWith('table-definitions/m_partner.json')) return jsonResponse(partnerDef)
+      if (url.endsWith('table-definitions/m_warehouse.json')) return jsonResponse(warehouseDef)
+      if (url.endsWith('export-definitions/index.json')) return jsonResponse(exportIndex)
+      if (url.endsWith('export-definitions/item_export_v1.json')) return jsonResponse(itemExportDef)
       throw new Error(`unexpected url: ${url}`)
     })
 
@@ -69,6 +79,18 @@ describe('EFFECT-1: JSON定義ファイルの追加のみで新規マスタテ�
     expect(definitions.map((d) => d.tableId).sort()).toEqual(['m_item', 'm_partner', 'm_warehouse'])
 
     const access = await initMasterDataAccess(definitions, { storage: createMemoryStorage() })
+
+    // 「出力」(DO-8): m_warehouseは連携ファイル定義を持たないが、既存のitem_export_v1
+    // （sourceTableId: m_item）の読み込み自体が壊れないこと、m_warehouseに対応する連携
+    // ファイル定義が（想定通り）0件であることを確認する
+    const { definitions: exportDefinitions, errors: exportErrors } = await loadExportDefinitions({
+      basePath: '/',
+      fetchImpl,
+      tableDefinitions: definitions,
+    })
+    expect(exportErrors).toEqual([])
+    expect(exportDefinitions.map((ed) => ed.exportId)).toEqual(['item_export_v1'])
+    expect(exportDefinitions.filter((ed) => ed.sourceTableId === 'm_warehouse')).toEqual([])
 
     // 「取込画面に新テーブルが反映される」= 新テーブル用のDAOがコード変更なしに自動生成されている
     const warehouseDao = access.daos.get('m_warehouse')
