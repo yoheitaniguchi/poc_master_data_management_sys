@@ -145,6 +145,38 @@ button:disabled {
   border-color: #15803d;
 }
 
+/* Issue #20: タブナビゲーション（App.tsxの画面切り替え）。 */
+.tab-nav {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: var(--space-5);
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -2px;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.tab-button:hover:not(:disabled) {
+  background: none;
+  color: var(--color-text);
+  border-bottom-color: var(--color-border);
+}
+
+.tab-button--active,
+.tab-button--active:hover:not(:disabled) {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
 /* Issue #19: 破壊的操作の確認用モーダル（ConfirmDialogコンポーネント）。 */
 .confirm-dialog {
   border: none;
