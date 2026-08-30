@@ -47,6 +47,7 @@ poc_master_data_management_sys/
 │   ├── design.md            # 要求仕様書との差分・追加決定（★まず読む）
 │   └── implementation-plan.md # フェーズ計画・実施結果
 ├── table-definitions/       # マスタテーブル定義JSON（実行時fetch対象、DO-1）
+│   ├── index.json             # 配置済みtableId一覧（GitHub Pagesにディレクトリ一覧APIがないため。design.md §4.6）
 │   ├── m_item.json           # 品目マスタ
 │   └── m_partner.json        # 取引先マスタ
 ├── export-definitions/      # 連携ファイル定義JSON（実行時fetch対象、DO-8）
@@ -95,11 +96,12 @@ npm run preview       # build成果物をGitHub Pages相当のbaseパスで動�
 
 ## 現在の実装状況
 
-ドキュメント整備（要求仕様書の格納・設計判断の確定・フェーズ計画・CLAUDE.md・レビューSubagentの
-整備）に続き、`docs/implementation-plan.md`のPhase 0（プロジェクト初期化：Vite+React+TypeScript
-スカフォールド、npm scripts、依存関係）まで完了。マスタテーブル定義・DAO・バリデーション等の
+`docs/implementation-plan.md`のPhase 0（プロジェクト初期化）・Phase 1（マスタテーブル定義JSON＋
+実行時DAO生成）まで完了。`table-definitions/`（index.jsonマニフェスト＋m_item/m_partner）・
+`src/core/schema/`（定義JSONの型・fetch・定義自体の検証）・`src/core/dao/`（idbベースの動的
+スキーマ構築・汎用DAO・import_logs用DAO）を実装済み。バリデーションエンジン・CSV取込・画面等の
 アプリケーションロジックは未着手。
-次に着手すべきは`docs/implementation-plan.md`のPhase 1（マスタテーブル定義JSON＋実行時DAO生成）。
+次に着手すべきは`docs/implementation-plan.md`のPhase 2（バリデーションエンジン）。
 
 ## 実装時に確認すべき設計判断（要求仕様書「やらない事」の再掲）
 

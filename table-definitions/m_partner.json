@@ -1,0 +1,48 @@
+{
+  "tableId": "m_partner",
+  "tableName": "取引先マスタ",
+  "columns": [
+    {
+      "columnId": "partner_code",
+      "columnName": "取引先コード",
+      "dataType": "string",
+      "maxLength": 20,
+      "notNull": true,
+      "unique": true,
+      "primaryKey": true
+    },
+    {
+      "columnId": "partner_name",
+      "columnName": "取引先名",
+      "dataType": "string",
+      "maxLength": 100,
+      "notNull": true,
+      "unique": false
+    },
+    {
+      "columnId": "partner_type",
+      "columnName": "取引先区分",
+      "dataType": "string",
+      "maxLength": 10,
+      "notNull": true,
+      "unique": false,
+      "constants": ["得意先", "仕入先"]
+    },
+    {
+      "columnId": "phone_number",
+      "columnName": "電話番号",
+      "dataType": "string",
+      "maxLength": 20,
+      "notNull": false,
+      "unique": false
+    },
+    {
+      "columnId": "address",
+      "columnName": "住所",
+      "dataType": "string",
+      "maxLength": 200,
+      "notNull": false,
+      "unique": false
+    }
+  ]
+}

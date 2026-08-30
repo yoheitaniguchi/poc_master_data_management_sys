@@ -145,6 +145,22 @@ poc_master_data_management_sys/
   （例: `partner_code`(PK)・`partner_name`・`partner_type`(constants: `得意先`/`仕入先`)・
   `phone_number`・`address`。詳細はPhase 1着手時に確定する）
 
+### 4.6 テーブル定義JSON一覧の管理方法（index.jsonマニフェスト）
+
+GitHub Pages（静的ファイルホスティング）にはディレクトリ一覧を取得するAPIがなく、
+`table-definitions/*.json`というワイルドカードを実行時に直接fetchすることはできない。
+
+**決定**: `table-definitions/index.json`に`{"tableIds": ["m_item", "m_partner"]}`の形式で
+配置済みの`tableId`一覧を持たせ、起動時にまずこれをfetchしてから、各`tableId`ごとに
+`table-definitions/{tableId}.json`を個別にfetchする。`export-definitions/`についても
+Phase 5で同様に`export-definitions/index.json`を導入する。
+
+**EFFECT-1との関係**: 新規マスタテーブルを追加する際は、定義JSON本体に加えてこの
+`index.json`への`tableId`追記が必要になる。これはコード修正ではなくJSONデータの追記で
+あるため、要求仕様書§1.2 EFFECT-1「JSON定義ファイルの追加のみで…コード修正なしに追加できる」
+の要件は引き続き満たす。EFFECT-1の検証手順（Phase 6・8）では「定義JSONの追加」と
+「index.jsonへの追記」の両方を実施した上で、アプリのリロードだけで反映されることを確認する。
+
 ---
 
 ## §5. 実装時に確認すべき設計判断（要求仕様書からの再掲）
