@@ -1,0 +1,40 @@
+import type { ReactNode } from 'react'
+import { useMasterDataAccessContext } from '../MasterDataAccessContext'
+import type { MasterDataAccess } from '../core/dao/masterDataAccess'
+import type { DefinitionValidationError } from '../core/schema/validateDefinition'
+
+interface DataAccessGateProps {
+  children: (access: MasterDataAccess, definitionErrors: DefinitionValidationError[]) => ReactNode
+}
+
+// docs/design.md §4.8: アプリ起動時のDBスキーマ構築（table-definitions/*.jsonのfetchと
+// IndexedDBスキーマ構築）が完了する前に各画面の操作をさせないためのガード。
+export function DataAccessGate({ children }: DataAccessGateProps) {
+  const state = useMasterDataAccessContext()
+
+  if (state.status === 'loading') {
+    return <p role="status">マスタ定義を読み込んでいます…</p>
+  }
+
+  if (state.status === 'error') {
+    return <p role="alert">アプリの初期化に失敗しました: {state.message}</p>
+  }
+
+  return (
+    <>
+      {state.definitionErrors.length > 0 && (
+        <div role="alert" className="definition-error-banner">
+          <p>一部のテーブル定義にエラーがあるため読み込めませんでした（定義JSONを確認してください）:</p>
+          <ul>
+            {state.definitionErrors.map((error, index) => (
+              <li key={index}>
+                {error.tableId}: {error.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {children(state.access, state.definitionErrors)}
+    </>
+  )
+}

@@ -217,7 +217,37 @@
 - レビュー観点: `ux-reviewer`
 
 ### 実施結果
-（未着手）
+
+- `src/useMasterDataAccess.ts` + `src/MasterDataAccessContext.tsx`: アプリ起動時に
+  `loadTableDefinitions`→`initMasterDataAccess`（Phase 1）を1回だけ実行し、結果
+  （`loading`/`ready`/`error`）をReact Contextで全画面に共有する`App.tsx`側の薄い配線層。
+  `src/screens/DataAccessGate.tsx`が各画面の先頭でこの状態をチェックし、初期化完了前
+  （`loading`）は各画面の操作自体をレンダリングしないことで、Phase 3からの申し送り
+  （design.md §4.8の前提をSCR-1側で担保する）に対応した。定義エラー（Phase 1の
+  `validateTableDefinition`が検出したもの）がある場合は警告バナーを表示する
+- `src/screens/ImportScreen.tsx`（SCR-1）: テーブル選択・ファイル選択・
+  `new Worker(new URL('../workers/csvImport.worker.ts', import.meta.url), {type:'module'})`
+  によるWorker起動→`postMessage`→結果受信→`worker.terminate()`という一連の流れを実装。
+  Upsertによる既存データ上書きという破壊的性質があるため、実行前に`window.confirm`で
+  確認を挟む。結果は取込ログと同じ`ImportLog`型をそのまま表示し、部分成功時はエラー明細
+  （行番号・カラム・内容）を一覧表示する
+- `src/screens/SearchExportScreen.tsx`（SCR-2）: テーブル選択時に`dao.findAll()`で全件表示、
+  カラムごとのテキスト入力から検索条件を組み立てて`dao.search()`を呼ぶ（DO-6）。
+  CSVダウンロード（DO-7）は選択中テーブルの全カラムをそのまま、`columnName`をヘッダーとして
+  出力する（DO-8の連携ファイル形式変換とは役割を分けるため、Phase 5で追加する変換出力とは
+  別のボタンとして扱う設計とした）。Excelでの文字化けを避けるためUTF-8 BOMを付与
+- `src/screens/ImportLogScreen.tsx`（SCR-3）: `import_logs`全件を開始日時降順で一覧表示し、
+  1件選択でエラー明細を表示する（DO-9）
+- 動作確認: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、14ファイル80件すべて
+  成功。画面自体はdesign.md §3の自動テスト対象外のため新規テストは追加していない）→
+  `npm run build`（エラーなし。`csvImport.worker.ts`が独立チャンクとして分離されることを確認）
+  → `npm run dev`を起動し、Playwrightで実際にブラウザ操作して以下を確認（すべて成功）：
+  取込先テーブルにm_item・m_partnerの両方が表示される／CSV取込が部分成功
+  （COMPLETED_WITH_ERRORS、成功1件・エラー2件、エラー内容がバリデーションエンジンの
+  メッセージと一致）として処理される／検索画面が取込結果を反映し部分一致検索が機能する／
+  CSVダウンロードボタンがエラーなく動作する／取込実行ログ画面にログが反映されエラー明細を
+  表示できる
+- `ux-reviewer`サブエージェントでレビュー済み（詳細はPR説明を参照）
 
 ---
 
