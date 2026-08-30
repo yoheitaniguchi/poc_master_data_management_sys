@@ -157,7 +157,50 @@
 - 取込実行ログ（`import_logs`、要求仕様書§5.5のフィールド定義）を1回の取込につき1件生成
 
 ### 実施結果
-（未着手）
+
+- `src/workers/importCsvFile.ts`: CSV取込の中核ロジック（パース・バリデーション・Upsert・
+  取込ログ生成）を、実際のWorker/DOM APIに依存しない純粋な非同期関数として実装。
+  `MasterDao`/`ImportLogDao`（Phase 1で定義したインターフェース）に依存する形にしたことで、
+  `fake-indexeddb`ベースの単体テストをWorker環境なしに実行できる
+  - CSVヘッダーはtable-definitionsの`columnId`と一致させる前提とした（papaparseの
+    `header: true`でcolumnIdキーのオブジェクトとしてパース）
+  - unique=trueの全カラムについて、取込開始時に`masterDao.findAll()`を1回だけ呼び出して
+    IndexedDB内の既存値集合を構築し、CSVファイル内の重複検出用集合（`seenInFile`）を
+    行ごとに更新しながら`validateRow`（Phase 2）へ渡す。1行が他カラムのエラーで不採用に
+    なった場合でも、`validateRow`が新設した`passedUniqueValues`を使って「そのカラム自身は
+    通過した」事実を`seenInFile`へ反映し、後続行との重複判定に活かす
+  - 取込ログは開始時に`status: RUNNING`で一旦保存し、完了後に最終状態（`COMPLETED`／
+    `COMPLETED_WITH_ERRORS`）で同じ`importId`により上書き保存する。処理中に例外が発生した
+    場合は`FAILED`として記録し、例外を呼び出し元へ伝播させない（取込処理自体が要求仕様書
+    §5.5の`FAILED`ステータスとして正常に完了する設計）
+  - `rowNumber`はヘッダー行を除いたデータ行の1始まり番号と定義した（要求仕様書はrowNumberの
+    起点を明示していないため、CSVを表計算ソフトで見たときの直感に合わせた）
+- `src/workers/csvImport.worker.ts`: 上記を呼び出す薄いWorkerラッパー。DBスキーマの
+  バージョン管理（ハッシュ比較・削除再作成）はアプリ起動時にメインスレッドで完了している
+  前提とし、Worker内では`idb`の`openDB(DB_NAME, 1)`で既存DBに接続するだけにした
+  （`localStorage`はWorkerから参照できないため）。tsconfigは`lib: ["DOM", ...]`のまま
+  変更せず、当該ファイル内のみ`/// <reference lib="webworker" />`と`self`のキャストで
+  Worker向けの型を得る方式とした（DOM libとの共存のため）
+  - 実際のWorkerインスタンス化（`new Worker(...)`）はPhase 4（画面実装）でSCR-1から行う。
+    本フェーズでは`self.onmessage`のロジック自体の型チェックまでを対象とした
+- 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、14ファイル
+  80件すべて成功）→ `npm run build`（エラーなし）
+- `logic-reviewer`サブエージェントでレビュー済み。要求仕様書§5.2〜§5.5との明確な矛盾は
+  指摘されなかったが、以下を反映した：
+  - `csvImport.worker.ts`: `openDB`・`file.text()`の失敗（`importCsvFile`呼び出しより手前の
+    失敗）が捕捉されず、メインスレッドへ一切応答が返らないまま無応答になる経路があったため、
+    `onmessage`ハンドラ全体を`try/catch`し、この経路の失敗は`CsvImportErrorMessage`として
+    応答するようにした（`import_logs`へ書き込むためのDB接続自体が失敗しているため、この経路の
+    失敗はログに記録できない。ユーザーへの応答を返すことを優先した）
+  - `importCsvFile.ts`: `Papa.parse`が検出した構文エラー（フィールド数不一致等）を
+    `CSVパースエラー: ...`として`errors`に記録するようにした（従来は`parseResult.errors`を
+    無視しており、原因が別の理由として誤って記録される可能性があった）
+  - `importCsvFile.test.ts`: primaryKey以外のunique列（IndexedDB内既存データ重複・CSVファイル
+    内重複の両方）の統合テスト、`importLogDao.save`が「開始時のRUNNING」「完了時の最終状態」の
+    2回呼ばれることを検証するテスト、CSVパースエラーの記録を検証するテストを追加
+  - **Phase 4への申し送り**: `docs/design.md` §4.8の前提（ユーザーが取込画面を開ける時点で
+    アプリ起動時のDBスキーマ構築が完了済み）を実際にどう担保するか（例: 起動処理完了まで
+    SCR-1の操作を無効化する等のUI側ガード）をPhase 4で設計すること
 
 ---
 
@@ -168,6 +211,9 @@
   全カラムそのまま出力）
 - `src/screens/ImportLogScreen.tsx`（SCR-3）: `import_logs`の一覧表示、1件選択でエラー明細を確認
 - 画面レイアウトの詳細は要求仕様書§6の通り本実装過程で決定する
+- Phase 3からの申し送り: `docs/design.md` §4.8の前提（起動時のDBスキーマ構築完了後でないと
+  CSV取込Workerが正しく動作しない）を、SCR-1側でどう担保するか設計すること
+  （例: 起動処理完了までインポート操作を無効化する等）
 - レビュー観点: `ux-reviewer`
 
 ### 実施結果

@@ -96,13 +96,13 @@ npm run preview       # build成果物をGitHub Pages相当のbaseパスで動�
 
 ## 現在の実装状況
 
-`docs/implementation-plan.md`のPhase 0〜2（プロジェクト初期化／マスタテーブル定義JSON＋実行時
-DAO生成／バリデーションエンジン）まで完了。`table-definitions/`（index.jsonマニフェスト＋
-m_item/m_partner）・`src/core/schema/`（定義JSONの型・fetch・定義自体の検証）・`src/core/dao/`
-（idbベースの動的スキーマ構築・汎用DAO・import_logs用DAO）・`src/core/validation/`
-（型→NotNull→長さ→定数→ユニークの5手順バリデーション関数群）を実装済み。CSV取込・画面等の
-アプリケーションロジックは未着手。
-次に着手すべきは`docs/implementation-plan.md`のPhase 3（CSV取込・Web Worker）。
+`docs/implementation-plan.md`のPhase 0〜3（プロジェクト初期化／マスタテーブル定義JSON＋実行時
+DAO生成／バリデーションエンジン／CSV取込・Web Worker）まで完了。`table-definitions/`
+（index.jsonマニフェスト＋m_item/m_partner）・`src/core/schema/`（定義JSONの型・fetch・定義
+自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・汎用DAO・import_logs用DAO）・
+`src/core/validation/`（型→NotNull→長さ→定数→ユニークの5手順バリデーション関数群）・
+`src/workers/`（CSV取込の中核ロジックと薄いWorkerラッパー）を実装済み。画面等のUIは未着手。
+次に着手すべきは`docs/implementation-plan.md`のPhase 4（画面実装）。
 
 ## 実装時に確認すべき設計判断（要求仕様書「やらない事」の再掲）
 

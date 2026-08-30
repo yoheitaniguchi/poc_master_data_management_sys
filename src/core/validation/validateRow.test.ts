@@ -189,6 +189,17 @@ describe('validateRow', () => {
     ])
   })
 
+  it('passedUniqueValuesには、行全体が他カラムのエラーで不採用でも、unique列自身が通過した値が入る（Phase 3のファイル内重複検出用）', () => {
+    const result = validateRow({
+      definition: itemDef,
+      // item_typeが不正で行全体は不採用（record=undefined）だが、item_code自体は正常に通過している
+      rawRow: { item_code: 'A001', item_name: 'ボルト', item_type: '資材' },
+      uniqueContexts: emptyUniqueContexts,
+    })
+    expect(result.record).toBeUndefined()
+    expect(result.passedUniqueValues).toEqual({ item_code: 'A001', serial_number: null })
+  })
+
   it('unique=trueのカラムに対応するuniqueContextが渡されない場合はプログラミングエラーとして例外を投げる', () => {
     expect(() =>
       validateRow({
