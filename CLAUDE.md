@@ -75,6 +75,9 @@ poc_master_data_management_sys/
     │   ├── ImportScreen.tsx        # SCR-1 CSV取込画面
     │   ├── SearchExportScreen.tsx  # SCR-2 マスタ検索・出力画面
     │   └── ImportLogScreen.tsx     # SCR-3 取込実行ログ画面
+    ├── scenarios/             # EFFECT-1/EFFECT-2をそのままテストケース化したシナリオテスト
+    │   ├── effect1.test.ts      # JSON追加のみでの新規テーブル反映
+    │   └── effect2.test.ts      # バリデーション値変更のみでの制約拡張
     └── **/*.test.ts
 ```
 
@@ -102,17 +105,18 @@ npm run preview       # build成果物をGitHub Pages相当のbaseパスで動�
 
 ## 現在の実装状況
 
-`docs/implementation-plan.md`のPhase 0〜5（プロジェクト初期化／マスタテーブル定義JSON＋実行時
-DAO生成／バリデーションエンジン／CSV取込・Web Worker／画面実装／連携ファイル作成機能）まで完了。
-`table-definitions/`（index.jsonマニフェスト＋m_item/m_partner）・`export-definitions/`
-（index.jsonマニフェスト＋item_export_v1）・`src/core/schema/`（定義JSONの型・fetch・定義
-自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・汎用DAO・import_logs用DAO）・
-`src/core/validation/`（型→NotNull→長さ→定数→ユニークの5手順バリデーション関数群）・
-`src/core/export/`（連携ファイル定義の型・読み込み・検証・CSV生成）・`src/workers/`（CSV取込の
-中核ロジックと薄いWorkerラッパー）・`src/screens/`（SCR-1〜3の3画面。SCR-2に連携ファイル出力を
-追加）・`src/useMasterDataAccess.ts`/`src/MasterDataAccessContext.tsx`（アプリ起動時のDAO・
-連携ファイル定義初期化とContext共有）を実装済み。
-次に着手すべきは`docs/implementation-plan.md`のPhase 6（自動テスト整備。EFFECT-1/2シナリオ含む）。
+`docs/implementation-plan.md`のPhase 0〜6（プロジェクト初期化／マスタテーブル定義JSON＋実行時
+DAO生成／バリデーションエンジン／CSV取込・Web Worker／画面実装／連携ファイル作成機能／自動テスト
+整備）まで完了。`table-definitions/`（index.jsonマニフェスト＋m_item/m_partner）・
+`export-definitions/`（index.jsonマニフェスト＋item_export_v1）・`src/core/schema/`（定義JSONの
+型・fetch・定義自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・汎用DAO・
+import_logs用DAO）・`src/core/validation/`（型→NotNull→長さ→定数→ユニークの5手順バリデーション
+関数群）・`src/core/export/`（連携ファイル定義の型・読み込み・検証・CSV生成）・`src/workers/`
+（CSV取込の中核ロジックと薄いWorkerラッパー）・`src/screens/`（SCR-1〜3の3画面。SCR-2に連携
+ファイル出力を追加）・`src/useMasterDataAccess.ts`/`src/MasterDataAccessContext.tsx`（アプリ
+起動時のDAO・連携ファイル定義初期化とContext共有）・`src/scenarios/`（EFFECT-1/2シナリオ
+テスト）を実装済み。GitHub Pagesビルド・デプロイ構成（CI/CD）は未着手。
+次に着手すべきは`docs/implementation-plan.md`のPhase 7（GitHub Pagesビルド・デプロイ構成）。
 
 ## 実装時に確認すべき設計判断（要求仕様書「やらない事」の再掲）
 
