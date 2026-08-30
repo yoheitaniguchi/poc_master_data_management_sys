@@ -138,9 +138,17 @@ body {
 
 .app-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+}
+
+/* Issue #26: 画面幅が狭い場合でもレイアウトが崩れないよう、余白を詰める。 */
+@media (max-width: 640px) {
+  .app-shell {
+    padding: var(--space-3);
+  }
 }
 
 .app-header h1 {
@@ -357,6 +365,7 @@ td.col-numeric {
 /* Issue #20: タブナビゲーション（App.tsxの画面切り替え）。 */
 .tab-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
   border-bottom: 2px solid var(--color-border);
   margin-bottom: var(--space-5);
@@ -453,6 +462,36 @@ fieldset {
   padding: var(--space-4);
   margin: var(--space-4) 0;
   background-color: var(--color-surface);
+}
+
+/*
+ * Issue #26: SearchExportScreenの検索条件フォーム。カラム数やウィンドウ幅に応じて
+ * 自然に折り返すグリッドレイアウト（従来はinline style（marginRightのみ）で
+ * カラム数が多いテーブルやウィンドウが狭い場合に崩れていた）。
+ */
+.search-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+.search-fields__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.search-fields__field input {
+  width: 100%;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 legend {
