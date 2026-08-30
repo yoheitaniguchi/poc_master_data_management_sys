@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DataAccessGate } from './DataAccessGate'
 import { importStatusLabel } from './importStatusLabels'
+import { Spinner } from '../components/Spinner'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { ImportLog } from '../core/dao/importLogDao'
 
@@ -38,12 +39,16 @@ function ImportLogScreenBody({ access }: { access: MasterDataAccess }) {
       <button type="button" onClick={refresh} disabled={isLoading}>
         更新
       </button>
-      <p>
-        {isLoading
-          ? '読み込み中…'
-          : logs.length === 0
-            ? 'まだ取込ログはありません。CSV取込画面から取込を実行してください。'
-            : `${logs.length}件`}
+      <p className={isLoading ? 'loading-inline' : undefined}>
+        {isLoading ? (
+          <>
+            <Spinner /> 読み込み中…
+          </>
+        ) : logs.length === 0 ? (
+          'まだ取込ログはありません。CSV取込画面から取込を実行してください。'
+        ) : (
+          `${logs.length}件`
+        )}
       </p>
 
       <div className="table-scroll">

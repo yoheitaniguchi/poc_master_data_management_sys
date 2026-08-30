@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DataAccessGate } from './DataAccessGate'
 import { importStatusLabel } from './importStatusLabels'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Spinner } from '../components/Spinner'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { ImportLog } from '../core/dao/importLogDao'
 import type { TableDefinition } from '../core/schema/types'
@@ -129,7 +130,13 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
         onClick={() => setShowConfirm(true)}
         disabled={!definition || !file || isRunning}
       >
-        {isRunning ? '取込実行中…' : '取込実行'}
+        {isRunning ? (
+          <span className="loading-inline">
+            <Spinner /> 取込実行中…
+          </span>
+        ) : (
+          '取込実行'
+        )}
       </button>
 
       <ConfirmDialog
@@ -146,7 +153,11 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
         onCancel={() => setShowConfirm(false)}
       />
 
-      {isRunning && <p role="status">取込を実行しています…（メイン画面の操作は継続できます）</p>}
+      {isRunning && (
+        <p role="status" className="loading-inline">
+          <Spinner /> 取込を実行しています…（メイン画面の操作は継続できます）
+        </p>
+      )}
 
       {outcome?.kind === 'error' && <p role="alert">取込処理でエラーが発生しました: {outcome.message}</p>}
 

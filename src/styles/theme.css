@@ -145,6 +145,28 @@ button:disabled {
   border-color: #15803d;
 }
 
+/* Issue #22: ローディング状態の視覚的フィードバック（Spinnerコンポーネント）。 */
+.loading-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Issue #21: 一覧テーブルの視覚的改善（罫線・ゼブラストライプ・見出し固定・数値右寄せ）。 */
 .table-scroll {
   overflow: auto;
