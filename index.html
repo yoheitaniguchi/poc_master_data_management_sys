@@ -4,8 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>マスタ管理システム PoC</title>
-    <script type="module" crossorigin src="/poc_master_data_management_sys/assets/index-coCpbP7T.js"></script>
-    <link rel="stylesheet" crossorigin href="/poc_master_data_management_sys/assets/index-BCZoI5sA.css">
+    <script>
+      // Issue #25: ダークモード切替時のちらつき防止。CSSやReactの初期描画より前に、
+      // localStorageに保存済みの明示的なテーマ選択があればdata-theme属性へ反映する。
+      // 未選択の場合はtheme.cssのprefers-color-scheme指定がOS設定に追従する。
+      (function () {
+        try {
+          var stored = localStorage.getItem('poc-master-data-theme')
+          if (stored === 'light' || stored === 'dark') {
+            document.documentElement.dataset.theme = stored
+          }
+        } catch (e) {}
+      })()
+    </script>
+    <script type="module" crossorigin src="/poc_master_data_management_sys/assets/index-Bs5p0h5L.js"></script>
+    <link rel="stylesheet" crossorigin href="/poc_master_data_management_sys/assets/index-pOySEhH1.css">
   </head>
   <body>
     <div id="root"></div>
