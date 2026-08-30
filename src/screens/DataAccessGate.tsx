@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useMasterDataAccessContext } from '../MasterDataAccessContext'
+import { Spinner } from '../components/Spinner'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { DefinitionValidationError } from '../core/schema/validateDefinition'
 import type { ExportDefinition } from '../core/export/types'
@@ -20,7 +21,11 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
   const state = useMasterDataAccessContext()
 
   if (state.status === 'loading') {
-    return <p role="status">マスタ定義を読み込んでいます…</p>
+    return (
+      <p role="status" className="loading-inline">
+        <Spinner /> マスタ定義を読み込んでいます…
+      </p>
+    )
   }
 
   if (state.status === 'error') {

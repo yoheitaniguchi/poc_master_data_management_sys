@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Papa from 'papaparse'
 import { DataAccessGate } from './DataAccessGate'
+import { Spinner } from '../components/Spinner'
 import { buildExportCsv } from '../core/export/buildExportCsv'
 import type { ExportDefinition } from '../core/export/types'
 import type { ExportDefinitionValidationError } from '../core/export/validateExportDefinition'
@@ -219,12 +220,16 @@ function SearchExportScreenBody({
             </p>
           )}
 
-          <p>
-            {isLoading
-              ? '読み込み中…'
-              : records.length === 0
-                ? '該当するデータがありません。検索条件を変更するか、CSV取込画面からデータを登録してください。'
-                : `${records.length}件`}
+          <p className={isLoading ? 'loading-inline' : undefined}>
+            {isLoading ? (
+              <>
+                <Spinner /> 読み込み中…
+              </>
+            ) : records.length === 0 ? (
+              '該当するデータがありません。検索条件を変更するか、CSV取込画面からデータを登録してください。'
+            ) : (
+              `${records.length}件`
+            )}
           </p>
 
           <div className="table-scroll">
