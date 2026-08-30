@@ -13,6 +13,11 @@ export function checkType(rawValue: string, dataType: DataType): TypeCheckResult
       return { ok: true, value: rawValue }
 
     case 'number': {
+      // Number()は空白のみの文字列を0に変換してしまう（例: Number(' ') === 0）ため、
+      // 空文字列と同様に扱われないよう明示的に弾く。
+      if (rawValue.trim() === '') {
+        return { ok: false, message: `数値として解釈できません: ${rawValue}` }
+      }
       const numericValue = Number(rawValue)
       if (Number.isNaN(numericValue)) {
         return { ok: false, message: `数値として解釈できません: ${rawValue}` }

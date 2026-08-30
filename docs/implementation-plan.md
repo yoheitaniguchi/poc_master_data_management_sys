@@ -134,8 +134,18 @@
   移動（schema層を土台としてdao層・validation層の双方が依存する構成に整理。dao.tsは
   re-exportのみ残し既存利用箇所への影響なし）
 - 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、13ファイル
-  64件すべて成功）→ `npm run build`（エラーなし）
-- `logic-reviewer`サブエージェントでレビュー済み（詳細はPR説明を参照）
+  69件すべて成功）→ `npm run build`（エラーなし）
+- `logic-reviewer`サブエージェントでレビュー済み。要求仕様書との明確な矛盾は指摘されなかったが、
+  以下を反映した：
+  - `checkType`のnumber型判定で、空白のみの文字列が`Number()`により`0`に変換されてしまう
+    バグを修正（`rawValue.trim() === ''`を明示的にエラー扱いに）
+  - `validateRow`の統合テストに、primaryKey以外のunique列は既存データ一致でも重複エラーに
+    なる（Upsert対象にならない）ケースと、③長さチェックと④定数チェックが同一カラムで
+    同時に違反する場合に長さチェックのみが報告される（手順の優先順位）ケースを追加
+  - `src/core/schema/validateDefinition.ts`（Phase 1）を拡張し、primaryKey以外のカラムでも
+    notNull/uniqueフィールドの欠落を定義エラーとして検出するようにした（従来はprimaryKey
+    カラムの欠落のみ検出しており、非primaryKeyカラムの欠落はバリデーションエンジンが
+    「任意項目」として黙って見逃す抜け穴があった）
 
 ---
 

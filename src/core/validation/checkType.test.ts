@@ -26,6 +26,11 @@ describe('checkType', () => {
       expect(result.ok).toBe(false)
       expect(result.message).toContain('abc')
     })
+
+    it('空白のみの文字列は0に変換されず、エラーになる（Number()の空白トリム挙動対策）', () => {
+      const result = checkType('   ', 'number')
+      expect(result.ok).toBe(false)
+    })
   })
 
   describe('boolean', () => {

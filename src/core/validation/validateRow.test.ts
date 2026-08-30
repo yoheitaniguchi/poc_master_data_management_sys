@@ -39,11 +39,28 @@ const itemDef: TableDefinition = {
       notNull: false,
       unique: false,
     },
+    {
+      columnId: 'serial_number',
+      columnName: '製造番号',
+      dataType: 'string',
+      notNull: false,
+      unique: true,
+    },
+    {
+      columnId: 'grade',
+      columnName: '等級',
+      dataType: 'string',
+      maxLength: 2,
+      notNull: false,
+      unique: false,
+      constants: ['A', 'B', 'C'],
+    },
   ],
 }
 
 const emptyUniqueContexts: Record<string, UniqueCheckContext> = {
   item_code: { seenInFile: new Set(), existingValues: new Set() },
+  serial_number: { seenInFile: new Set(), existingValues: new Set() },
 }
 
 describe('validateRow', () => {
@@ -59,6 +76,8 @@ describe('validateRow', () => {
       item_name: 'ボルト',
       item_type: '完成品',
       safety_stock: 10,
+      serial_number: null,
+      grade: null,
     })
   })
 
@@ -114,6 +133,7 @@ describe('validateRow', () => {
   it('primaryKeyの値が既存データと一致する場合はUpsert対象としてエラーにしない', () => {
     const uniqueContexts: Record<string, UniqueCheckContext> = {
       item_code: { seenInFile: new Set(), existingValues: new Set(['A001']) },
+      serial_number: { seenInFile: new Set(), existingValues: new Set() },
     }
     const result = validateRow({
       definition: itemDef,
@@ -126,6 +146,7 @@ describe('validateRow', () => {
   it('primaryKeyの値が同一CSVファイル内で重複する場合はエラーになる（既存一致とは異なり許容しない）', () => {
     const uniqueContexts: Record<string, UniqueCheckContext> = {
       item_code: { seenInFile: new Set(['A001']), existingValues: new Set() },
+      serial_number: { seenInFile: new Set(), existingValues: new Set() },
     }
     const result = validateRow({
       definition: itemDef,
@@ -134,6 +155,37 @@ describe('validateRow', () => {
     })
     expect(result.errors).toEqual([
       { columnId: 'item_code', message: 'CSVファイル内で値が重複しています: A001' },
+    ])
+  })
+
+  it('primaryKey以外のunique列は、既存データと一致してもUpsertとは扱わず重複エラーになる（design.md §5）', () => {
+    const uniqueContexts: Record<string, UniqueCheckContext> = {
+      item_code: { seenInFile: new Set(), existingValues: new Set() },
+      serial_number: { seenInFile: new Set(), existingValues: new Set(['SN-001']) },
+    }
+    const result = validateRow({
+      definition: itemDef,
+      rawRow: {
+        item_code: 'A002',
+        item_name: 'ナット',
+        item_type: '完成品',
+        serial_number: 'SN-001',
+      },
+      uniqueContexts,
+    })
+    expect(result.errors).toEqual([
+      { columnId: 'serial_number', message: '既存データと値が重複しています: SN-001' },
+    ])
+  })
+
+  it('1カラムに長さチェックと定数チェックの両方が違反する値を入れても、長さチェック（③）のエラーのみが報告される（④定数チェックは実行されない）', () => {
+    const result = validateRow({
+      definition: itemDef,
+      rawRow: { item_code: 'A001', item_name: 'ボルト', item_type: '完成品', grade: 'ZZZ' },
+      uniqueContexts: emptyUniqueContexts,
+    })
+    expect(result.errors).toEqual([
+      { columnId: 'grade', message: '2文字を超えています（実際: 3文字）' },
     ])
   })
 
