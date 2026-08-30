@@ -66,4 +66,27 @@ describe('buildExportCsv', () => {
     const csv = buildExportCsv(exportDef, [])
     expect(csv).toBe('ITEM_CD,ITEM_NAME,ITEM_TYPE')
   })
+
+  it('値にdelimiter・ダブルクォート・改行が含まれる場合はpapaparseにより自動でクォートされる', () => {
+    const recordsWithSpecialChars: MasterRecord[] = [
+      { item_code: 'A001', item_name: 'ボルト,M6"太径"', item_type: '完成品\n改行あり', safety_stock: 1 },
+    ]
+    const csv = buildExportCsv(exportDef, recordsWithSpecialChars)
+    const lines = csv.split('\r\n')
+    // ダブルクォートで囲われ、内部の"は""にエスケープされる（RFC4180準拠、papaparse標準動作）
+    expect(lines[1]).toBe('A001,"ボルト,M6""太径""","完成品\n改行あり"')
+  })
+
+  it('delimiterをタブに変更した場合、データ中の実タブ文字はクォートされる', () => {
+    const definition: ExportDefinition = {
+      ...exportDef,
+      fileFormat: { ...exportDef.fileFormat, delimiter: '\t' },
+    }
+    const recordsWithTab: MasterRecord[] = [
+      { item_code: 'A001', item_name: 'タブ\t入り', item_type: '完成品', safety_stock: 1 },
+    ]
+    const csv = buildExportCsv(definition, recordsWithTab)
+    const lines = csv.split('\r\n')
+    expect(lines[1]).toBe('A001\t"タブ\t入り"\t完成品')
+  })
 })

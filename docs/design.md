@@ -161,6 +161,16 @@ Phase 5で同様に`export-definitions/index.json`を導入する。
 の要件は引き続き満たす。EFFECT-1の検証手順（Phase 6・8）では「定義JSONの追加」と
 「index.jsonへの追記」の両方を実施した上で、アプリのリロードだけで反映されることを確認する。
 
+**Phase 5での追記（マニフェスト取得失敗時の扱いの非対称性）**: `table-definitions/index.json`
+の取得に失敗した場合（`loadTableDefinitions`）は例外を投げてアプリの起動自体を失敗させるが、
+`export-definitions/index.json`の取得に失敗した場合（`loadExportDefinitions`）は例外を
+投げず、連携ファイル定義0件として扱いアプリの起動は継続させる。これは意図的な非対称性であり、
+理由はDO-8（連携ファイル出力）がDO-1〜7・DO-9（マスタ定義・DAO・バリデーション・CSV取込・
+検索・出力・取込ログ）に対する付加機能であり、連携ファイル定義が1件も読めなくてもDO-8以外の
+機能は正常に動作できるため（`logic-reviewer`指摘によりPhase1の`loadTableDefinitions`との
+方針差を明文化）。取得失敗自体は`exportDefinitionErrors`としてSCR-2（マスタ検索・出力画面）
+にバナー表示され、黙って握りつぶすわけではない。
+
 ### 4.7 CSVファイルのヘッダー行の解釈（Phase 3）
 
 要求仕様書§5.3はCSVのヘッダー行がテーブル定義のどのフィールドに対応するかを明示していない。

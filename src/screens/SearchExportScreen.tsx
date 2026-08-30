@@ -3,6 +3,7 @@ import Papa from 'papaparse'
 import { DataAccessGate } from './DataAccessGate'
 import { buildExportCsv } from '../core/export/buildExportCsv'
 import type { ExportDefinition } from '../core/export/types'
+import type { ExportDefinitionValidationError } from '../core/export/validateExportDefinition'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { MasterRecord, MasterRecordValue, TableDefinition } from '../core/schema/types'
 
@@ -22,6 +23,12 @@ function parseSearchValue(dataType: TableDefinition['columns'][number]['dataType
   }
 }
 
+// タブ区切りのようにカンマ以外のdelimiterを使う連携ファイル定義では、拡張子を.csvのまま
+// 固定すると実際の区切り文字と食い違いExcel等で正しく開けない事故につながる（ux-reviewer指摘）。
+function extensionForDelimiter(delimiter: string): string {
+  return delimiter === '\t' ? 'tsv' : 'csv'
+}
+
 // ExcelでUTF-8のCSVを開いても文字化けしないようBOMを付与してダウンロードを開始する。
 function downloadCsvText(fileName: string, csvBody: string) {
   const blob = new Blob(['﻿' + csvBody], { type: 'text/csv;charset=utf-8' })
@@ -36,10 +43,10 @@ function downloadCsvText(fileName: string, csvBody: string) {
 // docs/design.md §4.7: CSV取込のヘッダーはcolumnId厳密一致を前提とするため、DO-7のダウンロード
 // もcolumnIdをヘッダーに使う（ダウンロードしたCSVをそのまま取込画面へ再投入できるようにする）。
 // 画面上の一覧表示（<th>）は人間向けにcolumnNameを使うが、ファイル出力は往復可能な形式を優先する。
-function downloadAllColumnsCsv(definition: TableDefinition, records: MasterRecord[]) {
+function buildAllColumnsCsv(definition: TableDefinition, records: MasterRecord[]): string {
   const headerRow = definition.columns.map((column) => column.columnId)
   const dataRows = records.map((record) => definition.columns.map((column) => record[column.columnId] ?? ''))
-  downloadCsvText(`${definition.tableId}.csv`, Papa.unparse([headerRow, ...dataRows]))
+  return Papa.unparse([headerRow, ...dataRows])
 }
 
 // SCR-2: 登録済みマスタデータを条件検索・一覧表示し、CSVダウンロード（DO-7）・連携ファイル出力
@@ -48,8 +55,12 @@ function downloadAllColumnsCsv(definition: TableDefinition, records: MasterRecor
 export function SearchExportScreen() {
   return (
     <DataAccessGate>
-      {(access, _definitionErrors, exportDefinitions) => (
-        <SearchExportScreenBody access={access} exportDefinitions={exportDefinitions} />
+      {(access, _definitionErrors, exportDefinitions, exportDefinitionErrors) => (
+        <SearchExportScreenBody
+          access={access}
+          exportDefinitions={exportDefinitions}
+          exportDefinitionErrors={exportDefinitionErrors}
+        />
       )}
     </DataAccessGate>
   )
@@ -58,26 +69,30 @@ export function SearchExportScreen() {
 function SearchExportScreenBody({
   access,
   exportDefinitions,
+  exportDefinitionErrors,
 }: {
   access: MasterDataAccess
   exportDefinitions: ExportDefinition[]
+  exportDefinitionErrors: ExportDefinitionValidationError[]
 }) {
   const [tableId, setTableId] = useState(access.definitions[0]?.tableId ?? '')
   const [searchInputs, setSearchInputs] = useState<Record<string, string>>({})
   const [records, setRecords] = useState<MasterRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [ignoredColumnNames, setIgnoredColumnNames] = useState<string[]>([])
-  const [exportId, setExportId] = useState('')
+  const [exportDefinitionId, setExportDefinitionId] = useState('')
+  const [downloadMessage, setDownloadMessage] = useState<string | null>(null)
 
   const definition = access.definitions.find((d) => d.tableId === tableId)
   const dao = definition ? access.daos.get(definition.tableId) : undefined
   const availableExportDefinitions = exportDefinitions.filter((ed) => ed.sourceTableId === tableId)
-  const selectedExportDefinition = availableExportDefinitions.find((ed) => ed.exportId === exportId)
+  const selectedExportDefinition = availableExportDefinitions.find((ed) => ed.exportId === exportDefinitionId)
 
   useEffect(() => {
     setSearchInputs({})
     setIgnoredColumnNames([])
-    setExportId('')
+    setExportDefinitionId('')
+    setDownloadMessage(null)
     if (!dao) {
       setRecords([])
       return
@@ -105,6 +120,7 @@ function SearchExportScreenBody({
       criteria[column.columnId] = value
     }
     setIgnoredColumnNames(ignored)
+    setDownloadMessage(null)
     setIsLoading(true)
     try {
       setRecords(await dao.search(criteria))
@@ -116,6 +132,7 @@ function SearchExportScreenBody({
   async function handleClear() {
     setSearchInputs({})
     setIgnoredColumnNames([])
+    setDownloadMessage(null)
     if (!dao) return
     setIsLoading(true)
     try {
@@ -123,6 +140,20 @@ function SearchExportScreenBody({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  function handleDownloadAllColumns() {
+    if (!definition) return
+    const fileName = `${definition.tableId}.csv`
+    downloadCsvText(fileName, buildAllColumnsCsv(definition, records))
+    setDownloadMessage(`ダウンロードを開始しました: ${fileName}`)
+  }
+
+  function handleDownloadExport() {
+    if (!selectedExportDefinition) return
+    const fileName = `${selectedExportDefinition.exportId}.${extensionForDelimiter(selectedExportDefinition.fileFormat.delimiter)}`
+    downloadCsvText(fileName, buildExportCsv(selectedExportDefinition, records))
+    setDownloadMessage(`ダウンロードを開始しました: ${fileName}`)
   }
 
   if (access.definitions.length === 0) {
@@ -178,13 +209,6 @@ function SearchExportScreenBody({
             </button>{' '}
             <button type="button" onClick={handleClear} disabled={isLoading}>
               クリア（全件表示）
-            </button>{' '}
-            <button
-              type="button"
-              onClick={() => downloadAllColumnsCsv(definition, records)}
-              disabled={isLoading || records.length === 0}
-            >
-              CSVダウンロード（全カラム。取込画面へそのまま再取込可能な形式）
             </button>
           </form>
 
@@ -222,32 +246,59 @@ function SearchExportScreenBody({
             </tbody>
           </table>
 
-          {availableExportDefinitions.length > 0 && (
-            <fieldset>
-              <legend>連携ファイル出力（DO-8: 決められた連携先フォーマットに変換して出力。上の検索結果が対象）</legend>
-              <label>
-                連携ファイル仕様:{' '}
-                <select value={exportId} onChange={(event) => setExportId(event.target.value)}>
-                  <option value="">選択してください</option>
-                  {availableExportDefinitions.map((ed) => (
-                    <option key={ed.exportId} value={ed.exportId}>
-                      {ed.exportName}（{ed.exportId}）
-                    </option>
+          <fieldset>
+            <legend>CSVダウンロード（上の検索結果を、全カラムそのまま出力）</legend>
+            <button type="button" onClick={handleDownloadAllColumns} disabled={isLoading || records.length === 0}>
+              ダウンロード
+            </button>
+            {records.length === 0 && <p>※検索結果が0件のためダウンロードできません</p>}
+            <p>取込画面（SCR-1）へそのまま再取込できる形式（ヘッダーがcolumnId）で出力します。</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>連携ファイル定義による出力（上の検索結果を、決められた出力カラム・ヘッダー名に変換して出力）</legend>
+
+            {exportDefinitionErrors.length > 0 && (
+              <div role="alert">
+                <p>
+                  一部の連携ファイル定義にエラーがあるため読み込めませんでした（定義JSONを確認してください）。
+                  該当の連携ファイル定義は下の選択肢に表示されません:
+                </p>
+                <ul>
+                  {exportDefinitionErrors.map((error, index) => (
+                    <li key={index}>
+                      {error.exportId}: {error.message}
+                    </li>
                   ))}
-                </select>
-              </label>{' '}
-              <button
-                type="button"
-                disabled={!selectedExportDefinition || records.length === 0}
-                onClick={() => {
-                  if (!selectedExportDefinition) return
-                  downloadCsvText(`${selectedExportDefinition.exportId}.csv`, buildExportCsv(selectedExportDefinition, records))
-                }}
-              >
-                連携ファイル出力
-              </button>
-            </fieldset>
-          )}
+                </ul>
+              </div>
+            )}
+
+            {availableExportDefinitions.length === 0 ? (
+              <p>このテーブル（{definition.tableName}）に対応する連携ファイル定義はありません。</p>
+            ) : (
+              <>
+                <label>
+                  連携ファイル定義:{' '}
+                  <select value={exportDefinitionId} onChange={(event) => setExportDefinitionId(event.target.value)}>
+                    <option value="">選択してください</option>
+                    {availableExportDefinitions.map((ed) => (
+                      <option key={ed.exportId} value={ed.exportId}>
+                        {ed.exportName}（{ed.exportId}）
+                      </option>
+                    ))}
+                  </select>
+                </label>{' '}
+                <button type="button" disabled={!selectedExportDefinition || records.length === 0} onClick={handleDownloadExport}>
+                  この定義で出力
+                </button>
+                {!selectedExportDefinition && <p>※連携ファイル定義を選択してください</p>}
+                {selectedExportDefinition && records.length === 0 && <p>※検索結果が0件のため出力できません</p>}
+              </>
+            )}
+          </fieldset>
+
+          {downloadMessage && <p role="status">{downloadMessage}</p>}
         </>
       )}
     </section>
