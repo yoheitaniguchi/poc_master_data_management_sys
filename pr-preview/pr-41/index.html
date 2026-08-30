@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>マスタ管理システム PoC</title>
+    <link rel="icon" type="image/svg+xml" href="/poc_master_data_management_sys/pr-preview/pr-41/favicon.svg" />
+    <script>
+      // Issue #25: ダークモード切替時のちらつき防止。CSSやReactの初期描画より前に、
+      // localStorageに保存済みの明示的なテーマ選択があればdata-theme属性へ反映する。
+      // 未選択の場合はtheme.cssのprefers-color-scheme指定がOS設定に追従する。
+      (function () {
+        try {
+          var stored = localStorage.getItem('poc-master-data-theme')
+          if (stored === 'light' || stored === 'dark') {
+            document.documentElement.dataset.theme = stored
+          }
+        } catch (e) {}
+      })()
+    </script>
+    <script type="module" crossorigin src="/poc_master_data_management_sys/pr-preview/pr-41/assets/index-BS1Tg76a.js"></script>
+    <link rel="stylesheet" crossorigin href="/poc_master_data_management_sys/pr-preview/pr-41/assets/index-CTsu-XPN.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
