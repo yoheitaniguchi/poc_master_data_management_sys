@@ -15,6 +15,12 @@ import type {
 
 type ImportOutcome = { kind: 'result'; log: ImportLog } | { kind: 'error'; message: string }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
+
 function runCsvImport(definition: TableDefinition, file: File): Promise<ImportOutcome> {
   return new Promise((resolve) => {
     const worker = new Worker(new URL('../workers/csvImport.worker.ts', import.meta.url), {
@@ -62,6 +68,7 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
   const [isRunning, setIsRunning] = useState(false)
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const definition = access.definitions.find((d) => d.tableId === tableId)
   const primaryKeyColumn = definition?.columns.find((column) => column.primaryKey)
@@ -104,15 +111,48 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
           </select>
         </label>
         {definition && (
-          <p>
-            想定するCSVヘッダー（1行目）: {definition.columns.map((c) => c.columnId).join(',')}
-          </p>
+          <>
+            <p>
+              想定するCSVヘッダー（1行目）:{' '}
+              {definition.columns.map((c, index) => (
+                <span key={c.columnId}>
+                  {index > 0 && ', '}
+                  {c.columnId}
+                  {c.notNull && (
+                    <span className="required-mark" title="必須項目（NotNull制約あり）">
+                      *
+                    </span>
+                  )}
+                </span>
+              ))}
+            </p>
+            {definition.columns.some((c) => c.notNull) && (
+              <p className="field-hint">※「*」は必須項目（NotNull制約あり）です。未入力の行はエラーになります。</p>
+            )}
+          </>
         )}
       </div>
 
       <div>
-        <label>
-          CSVファイル:{' '}
+        <p className="field-label">CSVファイル:</p>
+        <div
+          className={isDragOver ? 'dropzone dropzone--active' : 'dropzone'}
+          onDragOver={(event) => {
+            event.preventDefault()
+            if (!isRunning) setIsDragOver(true)
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={(event) => {
+            event.preventDefault()
+            setIsDragOver(false)
+            if (isRunning) return
+            const dropped = event.dataTransfer.files?.[0] ?? null
+            if (dropped) {
+              setFile(dropped)
+              setOutcome(null)
+            }
+          }}
+        >
           <input
             type="file"
             accept=".csv,text/csv"
@@ -122,7 +162,13 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
               setOutcome(null)
             }}
           />
-        </label>
+          <p className="dropzone__hint">ここにCSVファイルをドラッグ&ドロップすることもできます</p>
+          {file && (
+            <p className="dropzone__file">
+              選択中のファイル: {file.name}（{formatFileSize(file.size)}）
+            </p>
+          )}
+        </div>
       </div>
 
       <button
