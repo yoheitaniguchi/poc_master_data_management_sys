@@ -107,6 +107,44 @@ button:disabled {
   opacity: 0.55;
 }
 
+/*
+ * Issue #18: ボタンの用途別色分け。
+ * 既定のbuttonスタイル（中立グレー）はキャンセル・クリア・詳細確認等の
+ * 補助操作にそのまま使う。以下の修飾クラスは意味を持つ主要操作にのみ付与する。
+ */
+.btn-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-download {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.btn-download:hover:not(:disabled) {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
 input,
 select,
 textarea {
