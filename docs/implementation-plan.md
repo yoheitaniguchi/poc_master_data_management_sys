@@ -184,8 +184,23 @@
   - 実際のWorkerインスタンス化（`new Worker(...)`）はPhase 4（画面実装）でSCR-1から行う。
     本フェーズでは`self.onmessage`のロジック自体の型チェックまでを対象とした
 - 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、14ファイル
-  77件すべて成功）→ `npm run build`（エラーなし）
-- `logic-reviewer`サブエージェントでレビュー済み（詳細はPR説明を参照）
+  80件すべて成功）→ `npm run build`（エラーなし）
+- `logic-reviewer`サブエージェントでレビュー済み。要求仕様書§5.2〜§5.5との明確な矛盾は
+  指摘されなかったが、以下を反映した：
+  - `csvImport.worker.ts`: `openDB`・`file.text()`の失敗（`importCsvFile`呼び出しより手前の
+    失敗）が捕捉されず、メインスレッドへ一切応答が返らないまま無応答になる経路があったため、
+    `onmessage`ハンドラ全体を`try/catch`し、この経路の失敗は`CsvImportErrorMessage`として
+    応答するようにした（`import_logs`へ書き込むためのDB接続自体が失敗しているため、この経路の
+    失敗はログに記録できない。ユーザーへの応答を返すことを優先した）
+  - `importCsvFile.ts`: `Papa.parse`が検出した構文エラー（フィールド数不一致等）を
+    `CSVパースエラー: ...`として`errors`に記録するようにした（従来は`parseResult.errors`を
+    無視しており、原因が別の理由として誤って記録される可能性があった）
+  - `importCsvFile.test.ts`: primaryKey以外のunique列（IndexedDB内既存データ重複・CSVファイル
+    内重複の両方）の統合テスト、`importLogDao.save`が「開始時のRUNNING」「完了時の最終状態」の
+    2回呼ばれることを検証するテスト、CSVパースエラーの記録を検証するテストを追加
+  - **Phase 4への申し送り**: `docs/design.md` §4.8の前提（ユーザーが取込画面を開ける時点で
+    アプリ起動時のDBスキーマ構築が完了済み）を実際にどう担保するか（例: 起動処理完了まで
+    SCR-1の操作を無効化する等のUI側ガード）をPhase 4で設計すること
 
 ---
 
@@ -196,6 +211,9 @@
   全カラムそのまま出力）
 - `src/screens/ImportLogScreen.tsx`（SCR-3）: `import_logs`の一覧表示、1件選択でエラー明細を確認
 - 画面レイアウトの詳細は要求仕様書§6の通り本実装過程で決定する
+- Phase 3からの申し送り: `docs/design.md` §4.8の前提（起動時のDBスキーマ構築完了後でないと
+  CSV取込Workerが正しく動作しない）を、SCR-1側でどう担保するか設計すること
+  （例: 起動処理完了までインポート操作を無効化する等）
 - レビュー観点: `ux-reviewer`
 
 ### 実施結果

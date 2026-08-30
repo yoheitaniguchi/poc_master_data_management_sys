@@ -1,5 +1,5 @@
 import { deleteDB, type IDBPDatabase } from 'idb'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { importCsvFile } from './importCsvFile'
 import { createMasterDao, type MasterDao } from '../core/dao/dao'
 import { createImportLogDao, type ImportLogDao } from '../core/dao/importLogDao'
@@ -42,6 +42,13 @@ const itemDef: TableDefinition = {
       dataType: 'number',
       notNull: false,
       unique: false,
+    },
+    {
+      columnId: 'serial_number',
+      columnName: '製造番号',
+      dataType: 'string',
+      notNull: false,
+      unique: true,
     },
   ],
 }
@@ -90,8 +97,8 @@ describe('importCsvFile', () => {
 
     const records = await masterDao.findAll()
     expect(records).toEqual([
-      { item_code: 'A001', item_name: 'ボルト', item_type: '完成品', safety_stock: 10 },
-      { item_code: 'A002', item_name: 'ナット', item_type: '完成品', safety_stock: 20 },
+      { item_code: 'A001', item_name: 'ボルト', item_type: '完成品', safety_stock: 10, serial_number: null },
+      { item_code: 'A002', item_name: 'ナット', item_type: '完成品', safety_stock: 20, serial_number: null },
     ])
   })
 
@@ -122,7 +129,9 @@ describe('importCsvFile', () => {
     ])
 
     const records = await masterDao.findAll()
-    expect(records).toEqual([{ item_code: 'A001', item_name: 'ボルト', item_type: '完成品', safety_stock: 10 }])
+    expect(records).toEqual([
+      { item_code: 'A001', item_name: 'ボルト', item_type: '完成品', safety_stock: 10, serial_number: null },
+    ])
   })
 
   it('主キーが既存データと一致する行はUpsert（上書き更新）される', async () => {
@@ -147,6 +156,7 @@ describe('importCsvFile', () => {
       item_name: '新品目名',
       item_type: '完成品',
       safety_stock: 99,
+      serial_number: null,
     })
   })
 
@@ -176,11 +186,23 @@ describe('importCsvFile', () => {
       item_name: 'ボルト',
       item_type: '完成品',
       safety_stock: 10,
+      serial_number: null,
     })
   })
 
-  it('取込ログはRUNNINGとして先に保存され、完了後に最終状態で上書きされる（importIdは一貫している）', async () => {
-    const csvText = ['item_code,item_name,item_type,safety_stock', 'A001,ボルト,完成品,10'].join('\n')
+  it('非primaryKeyのunique列がIndexedDB内の既存データと重複する場合は重複エラーとしてスキップする（Upsert対象にはしない）', async () => {
+    await masterDao.upsert({
+      item_code: 'A001',
+      item_name: 'ボルト',
+      item_type: '完成品',
+      safety_stock: 10,
+      serial_number: 'SN-001',
+    })
+
+    const csvText = [
+      'item_code,item_name,item_type,safety_stock,serial_number',
+      'A002,ナット,完成品,20,SN-001',
+    ].join('\n')
 
     const log = await importCsvFile({
       definition: itemDef,
@@ -190,6 +212,57 @@ describe('importCsvFile', () => {
       importLogDao,
       generateImportId: nextImportId,
     })
+
+    expect(log.successRows).toBe(0)
+    expect(log.errorRows).toBe(1)
+    expect(log.errors).toEqual([
+      { rowNumber: 1, columnId: 'serial_number', message: '既存データと値が重複しています: SN-001' },
+    ])
+    expect(await masterDao.findByKey('A002')).toBeUndefined()
+  })
+
+  it('非primaryKeyのunique列が同一CSVファイル内で重複する場合は2件目以降が重複エラーとしてスキップされる', async () => {
+    const csvText = [
+      'item_code,item_name,item_type,safety_stock,serial_number',
+      'A001,ボルト,完成品,10,SN-001',
+      'A002,ナット,完成品,20,SN-001',
+    ].join('\n')
+
+    const log = await importCsvFile({
+      definition: itemDef,
+      fileName: 'item.csv',
+      csvText,
+      masterDao,
+      importLogDao,
+      generateImportId: nextImportId,
+    })
+
+    expect(log.successRows).toBe(1)
+    expect(log.errorRows).toBe(1)
+    expect(log.errors).toEqual([
+      { rowNumber: 2, columnId: 'serial_number', message: 'CSVファイル内で値が重複しています: SN-001' },
+    ])
+    expect(await masterDao.findByKey('A001')).toMatchObject({ serial_number: 'SN-001' })
+    expect(await masterDao.findByKey('A002')).toBeUndefined()
+  })
+
+  it('取込ログはRUNNINGとして先に保存され、完了後に最終状態で上書きされる（importIdは一貫している）', async () => {
+    const csvText = ['item_code,item_name,item_type,safety_stock', 'A001,ボルト,完成品,10'].join('\n')
+    const saveSpy = vi.spyOn(importLogDao, 'save')
+
+    const log = await importCsvFile({
+      definition: itemDef,
+      fileName: 'item.csv',
+      csvText,
+      masterDao,
+      importLogDao,
+      generateImportId: nextImportId,
+    })
+
+    // saveは「開始時のRUNNING記録」と「完了時の最終状態への上書き」の2回呼ばれる
+    expect(saveSpy).toHaveBeenCalledTimes(2)
+    expect(saveSpy.mock.calls[0][0]).toMatchObject({ importId: log.importId, status: 'RUNNING' })
+    expect(saveSpy.mock.calls[1][0]).toEqual(log)
 
     const allLogs = await importLogDao.findAll()
     expect(allLogs).toHaveLength(1)
@@ -215,6 +288,26 @@ describe('importCsvFile', () => {
     expect(log.totalRows).toBe(0)
     expect(log.successRows).toBe(0)
     expect(log.errorRows).toBe(0)
+  })
+
+  it('CSVの構文エラー（フィールド数不一致）はパースエラーとして取込ログに記録される', async () => {
+    const csvText = [
+      'item_code,item_name,item_type,safety_stock,serial_number',
+      'A001,ボルト,完成品,10,SN-001,EXTRA_FIELD',
+    ].join('\n')
+
+    const log = await importCsvFile({
+      definition: itemDef,
+      fileName: 'item.csv',
+      csvText,
+      masterDao,
+      importLogDao,
+      generateImportId: nextImportId,
+    })
+
+    const parseErrors = log.errors.filter((e) => e.message.startsWith('CSVパースエラー'))
+    expect(parseErrors.length).toBeGreaterThan(0)
+    expect(parseErrors[0].rowNumber).toBe(1)
   })
 
   it('処理中に例外が発生した場合はFAILEDとして記録する（要求仕様書§5.5）', async () => {

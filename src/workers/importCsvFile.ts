@@ -79,6 +79,17 @@ async function runImport(
   }
 
   const errors: ImportLogError[] = []
+  // papaparseが検出した構文エラー（フィールド数不一致等）。行データ自体は取れている場合が
+  // 多く、後続のセル単位バリデーションが結果的に検出することも多いが、原因を取込ログに
+  // 正確に残すため独立して記録する（件数の集計には含めない。あくまで参考情報）。
+  for (const parseError of parseResult.errors) {
+    errors.push({
+      rowNumber: typeof parseError.row === 'number' ? parseError.row + 1 : 0,
+      columnId: '',
+      message: `CSVパースエラー: ${parseError.message}`,
+    })
+  }
+
   let successRows = 0
   const rows = parseResult.data
 
