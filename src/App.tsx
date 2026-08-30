@@ -22,7 +22,7 @@ export function App() {
 
   return (
     <MasterDataAccessProvider value={state}>
-      <main>
+      <main className="app-shell">
         <h1>マスタ管理システム PoC</h1>
 
         {showRebuiltNotice && (
