@@ -193,25 +193,29 @@ function SearchExportScreenBody({
           >
             <fieldset>
               <legend>検索条件（未入力の項目は無視されます。文字列は部分一致、それ以外は完全一致）</legend>
-              {definition.columns.map((column) => (
-                <label key={column.columnId} style={{ marginRight: '1em' }}>
-                  {column.columnName}:{' '}
-                  <input
-                    type="text"
-                    value={searchInputs[column.columnId] ?? ''}
-                    onChange={(event) =>
-                      setSearchInputs((prev) => ({ ...prev, [column.columnId]: event.target.value }))
-                    }
-                  />
-                </label>
-              ))}
+              <div className="search-fields">
+                {definition.columns.map((column) => (
+                  <label key={column.columnId} className="search-fields__field">
+                    {column.columnName}
+                    <input
+                      type="text"
+                      value={searchInputs[column.columnId] ?? ''}
+                      onChange={(event) =>
+                        setSearchInputs((prev) => ({ ...prev, [column.columnId]: event.target.value }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
             </fieldset>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              検索
-            </button>{' '}
-            <button type="button" onClick={handleClear} disabled={isLoading}>
-              クリア（全件表示）
-            </button>
+            <div className="form-actions">
+              <button type="submit" className="btn-primary" disabled={isLoading}>
+                検索
+              </button>
+              <button type="button" onClick={handleClear} disabled={isLoading}>
+                クリア（全件表示）
+              </button>
+            </div>
           </form>
 
           {ignoredColumnNames.length > 0 && (
