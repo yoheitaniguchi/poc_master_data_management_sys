@@ -227,24 +227,30 @@ function SearchExportScreenBody({
                 : `${records.length}件`}
           </p>
 
-          <table>
-            <thead>
-              <tr>
-                {definition.columns.map((column) => (
-                  <th key={column.columnId}>{column.columnName}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((record, index) => (
-                <tr key={index}>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
                   {definition.columns.map((column) => (
-                    <td key={column.columnId}>{String(record[column.columnId] ?? '')}</td>
+                    <th key={column.columnId} className={column.dataType === 'number' ? 'col-numeric' : undefined}>
+                      {column.columnName}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {records.map((record, index) => (
+                  <tr key={index}>
+                    {definition.columns.map((column) => (
+                      <td key={column.columnId} className={column.dataType === 'number' ? 'col-numeric' : undefined}>
+                        {String(record[column.columnId] ?? '')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <fieldset>
             <legend>CSVダウンロード（上の検索結果を、全カラムそのまま出力）</legend>
