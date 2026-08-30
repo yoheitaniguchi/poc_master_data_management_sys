@@ -367,7 +367,43 @@
   コード修正なしに新しい制約でCSV取込が動作することをテストで確認する
 
 ### 実施結果
-（未着手）
+
+- DAO生成ロジック・バリデーションエンジン・CSV取込（Upsert判定・部分成功・取込ログ生成）の
+  ユニットテストは、Phase 1〜3・5の実装時に各`logic-reviewer`レビューサイクルの中で既に整備
+  済み（`src/core/schema/`・`src/core/dao/`・`src/core/validation/`・`src/core/export/`・
+  `src/workers/`配下の`*.test.ts`）。Phase 6での新規追加分は以下のEFFECT-1/2シナリオテストが
+  中心となる
+- `src/scenarios/effect1.test.ts`: EFFECT-1「JSON定義ファイルの追加のみで、新規マスタ
+  テーブルをコード修正なしに追加できる」をそのままテストケース化した。実在する
+  `table-definitions/m_item.json`・`m_partner.json`をNode の`fs`で直接読み込み（テストコード内に
+  複製すると実ファイルの変更に追随できず陳腐化するため）、これに加えて「これから追加する新規
+  テーブル」として、m_item/m_partnerのどちらとも異なるカラム構成（要求仕様書§7項番3、
+  boolean/date型を含む）の`m_warehouse`（倉庫マスタ）を用意。`index.json`への追記とm_warehouse
+  定義JSON追加を模したfetchモックを`loadTableDefinitions`に渡し、`initMasterDataAccess`→
+  新テーブル用DAOの自動生成→`importCsvFile`によるCSV取込→`dao.search`/`dao.findAll`という、
+  アプリ起動時と全く同じ関数列（画面固有コードは経由しない）で「取込・検索・出力」への反映を
+  一気通貫で検証する
+- `src/scenarios/effect2.test.ts`: EFFECT-2「バリデーション・整合性チェックの『値』が
+  JSON定義の変更だけで拡張できる」をそのままテストケース化した。意図的に厳しい制約
+  （`maxLength`=5等）を持つ独自の`m_item`定義でCSV取込がエラーになることを確認した後、
+  同一の`localStorage`（ハッシュ比較用）を共有した状態で`maxLength`または`constants`のみを
+  変更した定義に差し替えて`initMasterDataAccess`を再実行し、同一のCSVが今度はエラーなく
+  取り込めることを確認する（`src/core/`・`src/workers/`のコードは一切変更していない）
+- 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、19ファイル
+  103件すべて成功）→ `npm run build`（エラーなし）
+- `logic-reviewer`サブエージェントでレビュー済み。要求仕様書・design.mdとの明確な矛盾
+  （EFFECT-1/2の実証を妨げるもの、DONT違反）は指摘されなかったが、以下を反映した：
+  - `effect2.test.ts`が「制約変更後に以前エラーだった値が通る」ことしか検証しておらず、
+    docs/design.md §4.3のDB再作成（ハッシュ変化時に既存データを全削除）という重要な副作用
+    （制約変更と無関係な既存の正常データも失われる）を可視化していなかった点を指摘され、
+    制約変更前に登録済みだったレコードが再初期化後に失われることを確認するアサーション・
+    テストケースを追加した
+  - `effect1.test.ts`のコメントが「アプリ起動時と全く同じ関数・同じ順序で呼び出す」と
+    主張しながら、実際の起動シーケンス（`useMasterDataAccess.ts`）に含まれる
+    `loadExportDefinitions`の呼び出しが抜けていた点を指摘され、追加した（m_warehouseに
+    対応する連携ファイル定義が0件でも、既存のitem_export_v1の読み込み自体が壊れないことを
+    合わせて確認）
+  - vitestテスト1件追加（計103件すべて成功）
 
 ---
 
