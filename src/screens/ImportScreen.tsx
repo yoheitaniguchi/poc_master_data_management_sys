@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DataAccessGate } from './DataAccessGate'
 import { importStatusLabel } from './importStatusLabels'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { ImportLog } from '../core/dao/importLogDao'
 import type { TableDefinition } from '../core/schema/types'
@@ -58,22 +59,14 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
   const [file, setFile] = useState<File | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const definition = access.definitions.find((d) => d.tableId === tableId)
   const primaryKeyColumn = definition?.columns.find((column) => column.primaryKey)
 
-  async function handleImport() {
+  async function executeImport() {
     if (!definition || !file) return
-    if (
-      !window.confirm(
-        `「${definition.tableName}」にCSVを取り込みます。\n` +
-          `主キー「${primaryKeyColumn?.columnName ?? ''}」が一致する既存データは上書きされ、この操作は元に戻せません。\n` +
-          `実行しますか？`,
-      )
-    ) {
-      return
-    }
-
+    setShowConfirm(false)
     setIsRunning(true)
     setOutcome(null)
     const result = await runCsvImport(definition, file)
@@ -133,11 +126,25 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
       <button
         type="button"
         className="btn-danger"
-        onClick={handleImport}
+        onClick={() => setShowConfirm(true)}
         disabled={!definition || !file || isRunning}
       >
         {isRunning ? '取込実行中…' : '取込実行'}
       </button>
+
+      <ConfirmDialog
+        open={showConfirm}
+        title="CSV取込の確認"
+        message={
+          `「${definition?.tableName ?? ''}」にCSVを取り込みます。\n` +
+          `主キー「${primaryKeyColumn?.columnName ?? ''}」が一致する既存データは上書きされ、この操作は元に戻せません。\n` +
+          `実行しますか？`
+        }
+        confirmLabel="取込を実行する"
+        danger
+        onConfirm={executeImport}
+        onCancel={() => setShowConfirm(false)}
+      />
 
       {isRunning && <p role="status">取込を実行しています…（メイン画面の操作は継続できます）</p>}
 
