@@ -5,6 +5,7 @@ import { ImportScreen } from './screens/ImportScreen'
 import { SearchExportScreen } from './screens/SearchExportScreen'
 import { ImportLogScreen } from './screens/ImportLogScreen'
 import { Alert } from './components/Alert'
+import { ThemeToggle } from './components/ThemeToggle'
 
 type Tab = 'import' | 'search' | 'log'
 
@@ -24,7 +25,10 @@ export function App() {
   return (
     <MasterDataAccessProvider value={state}>
       <main className="app-shell">
-        <h1>マスタ管理システム PoC</h1>
+        <div className="app-header">
+          <h1>マスタ管理システム PoC</h1>
+          <ThemeToggle />
+        </div>
 
         {showRebuiltNotice && (
           <Alert variant="warning">
