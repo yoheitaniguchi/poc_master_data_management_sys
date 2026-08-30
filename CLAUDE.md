@@ -58,14 +58,18 @@ poc_master_data_management_sys/
 │   └── deploy.yml            # main push時のビルド・gh-pagesデプロイ
 └── src/
     ├── main.tsx
-    ├── App.tsx              # 画面本体。タブ切り替え等
+    ├── App.tsx              # 画面本体。タブ切り替え・MasterDataAccessProviderの配線
+    ├── useMasterDataAccess.ts        # 起動時のDAO初期化（loadTableDefinitions→initMasterDataAccess）
+    ├── MasterDataAccessContext.tsx   # 上記の結果を全画面で共有するReact Context
     ├── core/                # ★最重要ディレクトリ（ドメインロジック本体）
     │   ├── schema/            # テーブル定義JSONの型定義・読み込み・定義自体のバリデーション
     │   ├── dao/               # 実行時DAO生成・IndexedDBスキーマ構築（idbベース）
     │   └── validation/        # バリデーションエンジン（型/NotNull/長さ/定数/ユニーク）
     ├── workers/
-    │   └── csvImport.worker.ts # パース・バリデーション・Upsert登録・取込ログ生成
+    │   ├── csvImport.worker.ts # 薄いWorkerラッパー（DB接続・メッセージ送受信のみ）
+    │   └── importCsvFile.ts    # パース・バリデーション・Upsert登録・取込ログ生成の中核ロジック
     ├── screens/
+    │   ├── DataAccessGate.tsx      # 起動時DAO初期化の完了待ち・エラー表示ガード（各画面が使用）
     │   ├── ImportScreen.tsx        # SCR-1 CSV取込画面
     │   ├── SearchExportScreen.tsx  # SCR-2 マスタ検索・出力画面
     │   └── ImportLogScreen.tsx     # SCR-3 取込実行ログ画面
@@ -96,13 +100,16 @@ npm run preview       # build成果物をGitHub Pages相当のbaseパスで動�
 
 ## 現在の実装状況
 
-`docs/implementation-plan.md`のPhase 0〜3（プロジェクト初期化／マスタテーブル定義JSON＋実行時
-DAO生成／バリデーションエンジン／CSV取込・Web Worker）まで完了。`table-definitions/`
-（index.jsonマニフェスト＋m_item/m_partner）・`src/core/schema/`（定義JSONの型・fetch・定義
-自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・汎用DAO・import_logs用DAO）・
-`src/core/validation/`（型→NotNull→長さ→定数→ユニークの5手順バリデーション関数群）・
-`src/workers/`（CSV取込の中核ロジックと薄いWorkerラッパー）を実装済み。画面等のUIは未着手。
-次に着手すべきは`docs/implementation-plan.md`のPhase 4（画面実装）。
+`docs/implementation-plan.md`のPhase 0〜4（プロジェクト初期化／マスタテーブル定義JSON＋実行時
+DAO生成／バリデーションエンジン／CSV取込・Web Worker／画面実装）まで完了。
+`table-definitions/`（index.jsonマニフェスト＋m_item/m_partner）・`src/core/schema/`
+（定義JSONの型・fetch・定義自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・
+汎用DAO・import_logs用DAO）・`src/core/validation/`（型→NotNull→長さ→定数→ユニークの
+5手順バリデーション関数群）・`src/workers/`（CSV取込の中核ロジックと薄いWorkerラッパー）・
+`src/screens/`（SCR-1〜3の3画面）・`src/useMasterDataAccess.ts`/
+`src/MasterDataAccessContext.tsx`（アプリ起動時のDAO初期化とContext共有）を実装済み。
+連携ファイル作成機能（DO-8）は未着手。
+次に着手すべきは`docs/implementation-plan.md`のPhase 5（連携ファイル作成機能）。
 
 ## 実装時に確認すべき設計判断（要求仕様書「やらない事」の再掲）
 

@@ -58,7 +58,7 @@ let masterDao: MasterDao
 let importLogDao: ImportLogDao
 
 beforeEach(async () => {
-  db = await openMasterDb([itemDef], { storage: createMemoryStorage() })
+  ;({ db } = await openMasterDb([itemDef], { storage: createMemoryStorage() }))
   masterDao = createMasterDao(db, itemDef)
   importLogDao = createImportLogDao(db)
 })

@@ -217,7 +217,70 @@
 - レビュー観点: `ux-reviewer`
 
 ### 実施結果
-（未着手）
+
+- `src/useMasterDataAccess.ts` + `src/MasterDataAccessContext.tsx`: アプリ起動時に
+  `loadTableDefinitions`→`initMasterDataAccess`（Phase 1）を1回だけ実行し、結果
+  （`loading`/`ready`/`error`）をReact Contextで全画面に共有する`App.tsx`側の薄い配線層。
+  `src/screens/DataAccessGate.tsx`が各画面の先頭でこの状態をチェックし、初期化完了前
+  （`loading`）は各画面の操作自体をレンダリングしないことで、Phase 3からの申し送り
+  （design.md §4.8の前提をSCR-1側で担保する）に対応した。定義エラー（Phase 1の
+  `validateTableDefinition`が検出したもの）がある場合は警告バナーを表示する
+- `src/screens/ImportScreen.tsx`（SCR-1）: テーブル選択・ファイル選択・
+  `new Worker(new URL('../workers/csvImport.worker.ts', import.meta.url), {type:'module'})`
+  によるWorker起動→`postMessage`→結果受信→`worker.terminate()`という一連の流れを実装。
+  Upsertによる既存データ上書きという破壊的性質があるため、実行前に`window.confirm`で
+  確認を挟む。結果は取込ログと同じ`ImportLog`型をそのまま表示し、部分成功時はエラー明細
+  （行番号・カラム・内容）を一覧表示する
+- `src/screens/SearchExportScreen.tsx`（SCR-2）: テーブル選択時に`dao.findAll()`で全件表示、
+  カラムごとのテキスト入力から検索条件を組み立てて`dao.search()`を呼ぶ（DO-6）。
+  CSVダウンロード（DO-7）は選択中テーブルの全カラムをそのまま、`columnName`をヘッダーとして
+  出力する（DO-8の連携ファイル形式変換とは役割を分けるため、Phase 5で追加する変換出力とは
+  別のボタンとして扱う設計とした）。Excelでの文字化けを避けるためUTF-8 BOMを付与
+- `src/screens/ImportLogScreen.tsx`（SCR-3）: `import_logs`全件を開始日時降順で一覧表示し、
+  1件選択でエラー明細を表示する（DO-9）
+- 動作確認: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、14ファイル82件すべて
+  成功。ux-reviewer指摘対応で`openMasterDb`が返す`rebuilt`フラグのテストを`core/dao`側に
+  追加したが、画面自体はdesign.md §3の自動テスト対象外のため screens/ への新規テストは
+  追加していない）→ `npm run build`（エラーなし。`csvImport.worker.ts`が独立チャンクとして
+  分離されることを確認）→ `npm run dev`を起動し、Playwrightで実際にブラウザ操作して確認
+  （ux-reviewer指摘対応の反映後に再確認。すべて成功）：
+  取込先テーブルにm_item・m_partnerの両方が表示される／CSV取込が部分成功
+  （COMPLETED_WITH_ERRORS、成功1件・エラー2件、エラー内容がバリデーションエンジンの
+  メッセージと一致）として処理される／タブ切り替え後も取込結果表示が保持される／
+  検索画面が取込結果を反映しEnterキーでの部分一致検索が機能する／CSVダウンロードの
+  ヘッダーが`columnId`（取込画面へ再投入可能な形式）である／不正な検索値を入力すると
+  警告が表示される／取込実行ログ画面にログが反映され詳細を表示できる／初回起動時のみ
+  DB再構築通知が表示され、定義変更のない再読み込みでは表示されない
+- `ux-reviewer`サブエージェントでレビュー済み。Critical/High/Medium/Lowで多数の指摘を受け、
+  以下を反映した：
+  - **[Critical]** スキーマ変更時のDB全削除（`docs/design.md` §4.3）がUIに一切現れない問題:
+    `openMasterDb`/`initMasterDataAccess`が`rebuilt`フラグを返すようにし、`App.tsx`で
+    アプリ起動時に一度だけ「既存データを削除して再作成した」旨を通知するバナーを表示する
+  - **[High]** タブ切り替えでCSV取込結果が消える問題: `ImportScreen`のみタブ切り替えでも
+    アンマウントしない（`hidden`属性で表示だけ切り替える）よう`App.tsx`を変更。ただし
+    `SearchExportScreen`/`ImportLogScreen`は逆にタブ再訪問のたびに最新データを取得し直す
+    必要があるため（マウント時1回のみ`findAll()`する設計のため）、これらは従来通り
+    条件付きレンダリングでアンマウント・再マウントさせる方針を維持した（一度hidden方式に
+    統一しようとしたところ、検索結果が更新されなくなる新たな不具合が生じたため
+    Playwright確認で検出・修正）
+  - **[High]** DO-7のCSVダウンロードヘッダー（`columnName`）とCSV取込の期待ヘッダー
+    （`columnId`、`docs/design.md` §4.7）が食い違い、ダウンロードしたCSVをそのまま
+    再取込できない問題: ダウンロードのヘッダーを`columnId`に統一（`docs/design.md` §4.7に
+    追記）。合わせてImportScreenに選択中テーブルの想定CSVヘッダーを表示するようにした
+  - **[Medium]** Upsert確認ダイアログに主キーカラム名と「元に戻せません」を明記
+  - **[Medium]** SCR-2のテーブル選択に読み込み中の`disabled`を追加（ImportScreenとの一貫性）
+  - **[Medium]** 検索条件をEnterキーでも送信できるよう`<form>`化
+  - **[Medium]** 検索値が型変換できず無視された場合に警告を表示するようにした
+  - **[Medium]** 初期化失敗時に「再読み込み」ボタンを追加
+  - **[Medium]** タブの現在地表現に`disabled`を流用していた点を`aria-current`とスタイルに変更
+  - **[Low]** テーブル切り替え時にファイル選択もクリアするようにした
+  - **[Low]** 検索結果0件・取込ログ0件のときに次のアクションを示す案内文を表示
+  - **[Low]** SCR-1/SCR-3で重複定義していたステータスラベルを`src/screens/importStatusLabels.ts`
+    に集約
+  - **[Low]** 「エラー明細を見る」ボタンをエラー0件の行にも表示していた点を「詳細を見る」に改名
+  - 上記反映後、`npm run dev`を再起動しPlaywrightで再検証（初回起動での再構築通知表示・
+    タブ切り替えでの取込結果保持・Enterキー検索・ダウンロードCSVのヘッダーが`columnId`である
+    こと・不正検索値の警告表示・定義変更なしでの再構築通知非表示、をすべて確認）
 
 ---
 

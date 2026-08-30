@@ -56,4 +56,14 @@ describe('initMasterDataAccess', () => {
     await itemDao.upsert({ item_code: 'A001' })
     expect(await itemDao.findAll()).toEqual([{ item_code: 'A001' }])
   })
+
+  it('openMasterDbのrebuiltフラグをそのまま返す（画面側でデータ削除の通知に使うため）', async () => {
+    const storage = createMemoryStorage()
+    access = await initMasterDataAccess([itemDef], { storage })
+    expect(access.rebuilt).toBe(true)
+    access.db.close()
+
+    access = await initMasterDataAccess([itemDef], { storage })
+    expect(access.rebuilt).toBe(false)
+  })
 })

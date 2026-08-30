@@ -37,7 +37,7 @@ let db: IDBPDatabase
 let dao: ImportLogDao
 
 beforeEach(async () => {
-  db = await openMasterDb([itemDef], { storage: createMemoryStorage() })
+  ;({ db } = await openMasterDb([itemDef], { storage: createMemoryStorage() }))
   dao = createImportLogDao(db)
 })
 
