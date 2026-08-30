@@ -46,36 +46,38 @@ function ImportLogScreenBody({ access }: { access: MasterDataAccess }) {
             : `${logs.length}件`}
       </p>
 
-      <table>
-        <thead>
-          <tr>
-            <th>実行日時</th>
-            <th>テーブル</th>
-            <th>ファイル名</th>
-            <th>ステータス</th>
-            <th>件数（成功/エラー/合計）</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {logs.map((log) => (
-            <tr key={log.importId}>
-              <td>{log.startedAt}</td>
-              <td>{tableNameOf(log.tableId)}</td>
-              <td>{log.fileName}</td>
-              <td>{importStatusLabel[log.status]}</td>
-              <td>
-                {log.successRows}/{log.errorRows}/{log.totalRows}
-              </td>
-              <td>
-                <button type="button" onClick={() => setSelectedImportId(log.importId)}>
-                  詳細を見る
-                </button>
-              </td>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>実行日時</th>
+              <th>テーブル</th>
+              <th>ファイル名</th>
+              <th>ステータス</th>
+              <th className="col-numeric">件数（成功/エラー/合計）</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {logs.map((log) => (
+              <tr key={log.importId}>
+                <td>{log.startedAt}</td>
+                <td>{tableNameOf(log.tableId)}</td>
+                <td>{log.fileName}</td>
+                <td>{importStatusLabel[log.status]}</td>
+                <td className="col-numeric">
+                  {log.successRows}/{log.errorRows}/{log.totalRows}
+                </td>
+                <td>
+                  <button type="button" onClick={() => setSelectedImportId(log.importId)}>
+                    詳細を見る
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {selectedLog && (
         <div>
@@ -85,24 +87,26 @@ function ImportLogScreenBody({ access }: { access: MasterDataAccess }) {
           {selectedLog.errors.length === 0 ? (
             <p>エラーはありません。</p>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>行番号</th>
-                  <th>カラム</th>
-                  <th>内容</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedLog.errors.map((error, index) => (
-                  <tr key={index}>
-                    <td>{error.rowNumber || '-'}</td>
-                    <td>{error.columnId || '-'}</td>
-                    <td>{error.message}</td>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th className="col-numeric">行番号</th>
+                    <th>カラム</th>
+                    <th>内容</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {selectedLog.errors.map((error, index) => (
+                    <tr key={index}>
+                      <td className="col-numeric">{error.rowNumber || '-'}</td>
+                      <td>{error.columnId || '-'}</td>
+                      <td>{error.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

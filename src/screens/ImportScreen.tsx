@@ -164,24 +164,26 @@ function ImportResultSummary({ log }: { log: ImportLog }) {
         <li>件数: 合計{log.totalRows}件 / 成功{log.successRows}件 / エラー{log.errorRows}件</li>
       </ul>
       {log.errors.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>行番号</th>
-              <th>カラム</th>
-              <th>内容</th>
-            </tr>
-          </thead>
-          <tbody>
-            {log.errors.map((error, index) => (
-              <tr key={index}>
-                <td>{error.rowNumber || '-'}</td>
-                <td>{error.columnId || '-'}</td>
-                <td>{error.message}</td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th className="col-numeric">行番号</th>
+                <th>カラム</th>
+                <th>内容</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {log.errors.map((error, index) => (
+                <tr key={index}>
+                  <td className="col-numeric">{error.rowNumber || '-'}</td>
+                  <td>{error.columnId || '-'}</td>
+                  <td>{error.message}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
