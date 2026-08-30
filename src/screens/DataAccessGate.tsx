@@ -2,9 +2,16 @@ import type { ReactNode } from 'react'
 import { useMasterDataAccessContext } from '../MasterDataAccessContext'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { DefinitionValidationError } from '../core/schema/validateDefinition'
+import type { ExportDefinition } from '../core/export/types'
+import type { ExportDefinitionValidationError } from '../core/export/validateExportDefinition'
 
 interface DataAccessGateProps {
-  children: (access: MasterDataAccess, definitionErrors: DefinitionValidationError[]) => ReactNode
+  children: (
+    access: MasterDataAccess,
+    definitionErrors: DefinitionValidationError[],
+    exportDefinitions: ExportDefinition[],
+    exportDefinitionErrors: ExportDefinitionValidationError[],
+  ) => ReactNode
 }
 
 // docs/design.md §4.8: アプリ起動時のDBスキーマ構築（table-definitions/*.jsonのfetchと
@@ -44,7 +51,22 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
           </ul>
         </div>
       )}
-      {children(state.access, state.definitionErrors)}
+      {state.exportDefinitionErrors.length > 0 && (
+        <div role="alert" className="export-definition-error-banner">
+          <p>
+            一部の連携ファイル定義にエラーがあるため読み込めませんでした（定義JSONを確認してください）。
+            該当の連携ファイルは出力の選択肢に表示されません:
+          </p>
+          <ul>
+            {state.exportDefinitionErrors.map((error, index) => (
+              <li key={index}>
+                {error.exportId}: {error.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {children(state.access, state.definitionErrors, state.exportDefinitions, state.exportDefinitionErrors)}
     </>
   )
 }

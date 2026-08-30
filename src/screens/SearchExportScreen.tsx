@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import Papa from 'papaparse'
 import { DataAccessGate } from './DataAccessGate'
+import { buildExportCsv } from '../core/export/buildExportCsv'
+import type { ExportDefinition } from '../core/export/types'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { MasterRecord, MasterRecordValue, TableDefinition } from '../core/schema/types'
 
@@ -20,14 +22,8 @@ function parseSearchValue(dataType: TableDefinition['columns'][number]['dataType
   }
 }
 
-// docs/design.md §4.7: CSV取込のヘッダーはcolumnId厳密一致を前提とするため、DO-7のダウンロード
-// もcolumnIdをヘッダーに使う（ダウンロードしたCSVをそのまま取込画面へ再投入できるようにする）。
-// 画面上の一覧表示（<th>）は人間向けにcolumnNameを使うが、ファイル出力は往復可能な形式を優先する。
-function downloadCsv(fileName: string, definition: TableDefinition, records: MasterRecord[]) {
-  const headerRow = definition.columns.map((column) => column.columnId)
-  const dataRows = records.map((record) => definition.columns.map((column) => record[column.columnId] ?? ''))
-  const csvBody = Papa.unparse([headerRow, ...dataRows])
-  // Excelで文字化けしないようUTF-8 BOMを付与する
+// ExcelでUTF-8のCSVを開いても文字化けしないようBOMを付与してダウンロードを開始する。
+function downloadCsvText(fileName: string, csvBody: string) {
   const blob = new Blob(['﻿' + csvBody], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -37,24 +33,51 @@ function downloadCsv(fileName: string, definition: TableDefinition, records: Mas
   URL.revokeObjectURL(url)
 }
 
-// SCR-2: 登録済みマスタデータを条件検索・一覧表示し、CSVダウンロードする画面（DO-6, DO-7）。
-export function SearchExportScreen() {
-  return <DataAccessGate>{(access) => <SearchExportScreenBody access={access} />}</DataAccessGate>
+// docs/design.md §4.7: CSV取込のヘッダーはcolumnId厳密一致を前提とするため、DO-7のダウンロード
+// もcolumnIdをヘッダーに使う（ダウンロードしたCSVをそのまま取込画面へ再投入できるようにする）。
+// 画面上の一覧表示（<th>）は人間向けにcolumnNameを使うが、ファイル出力は往復可能な形式を優先する。
+function downloadAllColumnsCsv(definition: TableDefinition, records: MasterRecord[]) {
+  const headerRow = definition.columns.map((column) => column.columnId)
+  const dataRows = records.map((record) => definition.columns.map((column) => record[column.columnId] ?? ''))
+  downloadCsvText(`${definition.tableId}.csv`, Papa.unparse([headerRow, ...dataRows]))
 }
 
-function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
+// SCR-2: 登録済みマスタデータを条件検索・一覧表示し、CSVダウンロード（DO-7）・連携ファイル出力
+// （DO-8）する画面（DO-6）。DO-7は「今見ている検索結果をそのままCSVに」、DO-8は「決められた
+// 連携先フォーマットに変換して出力」という役割分担（要求仕様書§5.4）。
+export function SearchExportScreen() {
+  return (
+    <DataAccessGate>
+      {(access, _definitionErrors, exportDefinitions) => (
+        <SearchExportScreenBody access={access} exportDefinitions={exportDefinitions} />
+      )}
+    </DataAccessGate>
+  )
+}
+
+function SearchExportScreenBody({
+  access,
+  exportDefinitions,
+}: {
+  access: MasterDataAccess
+  exportDefinitions: ExportDefinition[]
+}) {
   const [tableId, setTableId] = useState(access.definitions[0]?.tableId ?? '')
   const [searchInputs, setSearchInputs] = useState<Record<string, string>>({})
   const [records, setRecords] = useState<MasterRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [ignoredColumnNames, setIgnoredColumnNames] = useState<string[]>([])
+  const [exportId, setExportId] = useState('')
 
   const definition = access.definitions.find((d) => d.tableId === tableId)
   const dao = definition ? access.daos.get(definition.tableId) : undefined
+  const availableExportDefinitions = exportDefinitions.filter((ed) => ed.sourceTableId === tableId)
+  const selectedExportDefinition = availableExportDefinitions.find((ed) => ed.exportId === exportId)
 
   useEffect(() => {
     setSearchInputs({})
     setIgnoredColumnNames([])
+    setExportId('')
     if (!dao) {
       setRecords([])
       return
@@ -158,7 +181,7 @@ function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
             </button>{' '}
             <button
               type="button"
-              onClick={() => downloadCsv(`${definition.tableId}.csv`, definition, records)}
+              onClick={() => downloadAllColumnsCsv(definition, records)}
               disabled={isLoading || records.length === 0}
             >
               CSVダウンロード（全カラム。取込画面へそのまま再取込可能な形式）
@@ -198,6 +221,33 @@ function SearchExportScreenBody({ access }: { access: MasterDataAccess }) {
               ))}
             </tbody>
           </table>
+
+          {availableExportDefinitions.length > 0 && (
+            <fieldset>
+              <legend>連携ファイル出力（DO-8: 決められた連携先フォーマットに変換して出力。上の検索結果が対象）</legend>
+              <label>
+                連携ファイル仕様:{' '}
+                <select value={exportId} onChange={(event) => setExportId(event.target.value)}>
+                  <option value="">選択してください</option>
+                  {availableExportDefinitions.map((ed) => (
+                    <option key={ed.exportId} value={ed.exportId}>
+                      {ed.exportName}（{ed.exportId}）
+                    </option>
+                  ))}
+                </select>
+              </label>{' '}
+              <button
+                type="button"
+                disabled={!selectedExportDefinition || records.length === 0}
+                onClick={() => {
+                  if (!selectedExportDefinition) return
+                  downloadCsvText(`${selectedExportDefinition.exportId}.csv`, buildExportCsv(selectedExportDefinition, records))
+                }}
+              >
+                連携ファイル出力
+              </button>
+            </fieldset>
+          )}
         </>
       )}
     </section>

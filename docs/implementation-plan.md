@@ -292,7 +292,43 @@
 - DO-7（素の全カラムCSV）とDO-8（連携先フォーマット変換）の役割分担をUI上で明確に区別する
 
 ### 実施結果
-（未着手）
+
+- `export-definitions/index.json`（tableIdマニフェストと同じ方式。docs/design.md §4.6）＋
+  `export-definitions/item_export_v1.json`（要求仕様書§5.4のサンプルそのまま、sourceTableId:
+  `m_item`）を配置
+- `src/core/export/types.ts`: `ExportDefinition`/`ExportOutputColumn`/`ExportFileFormat`/
+  `ExportDefinitionIndex`の型を定義
+- `src/core/export/validateExportDefinition.ts`: 連携ファイル定義JSON自体の検証
+  （`sourceTableId`がテーブル定義に実在するか、`outputColumns[].sourceColumnId`がそのテーブルの
+  カラムとして実在するか、`outputColumns`が空でないか、`encoding`が`UTF-8`か、`lineEnding`が
+  `CRLF`/`LF`か、`delimiter`が空でないか）。`sourceTableId`/`sourceColumnId`の参照先チェックは
+  DONT-1が禁止する「マスタデータ間の参照整合性チェック」ではなく、定義JSON同士の静的な
+  整合性チェックである点をコメントで明記した（Phase 1の`validateTableDefinition`と同種）
+  - `encoding`は要求仕様書§5.4のフィールドとして保持するが、本PoCではUTF-8以外への変換を
+    実施しない（ブラウザ標準APIのみでShift-JIS等への変換は本PoCの検証目的から外れるため）
+    簡易方針とし、UTF-8以外は定義エラーとして明示的に弾く
+- `src/core/export/loadExportDefinitions.ts`: `table-definitions`と同じくindex.json起点で
+  各定義JSONを個別fetchする。DO-8はDO-6/7への付加機能であるため、マニフェスト自体の取得に
+  失敗してもアプリ全体の起動は妨げず、空の一覧として扱う（`loadTableDefinitions`とは異なり
+  例外を投げない）
+- `src/core/export/buildExportCsv.ts`: `outputColumns`の順序で`sourceColumnId`の値を
+  `outputHeader`ヘッダーに変換し、`fileFormat`の`delimiter`/`lineEnding`/`includeHeader`に
+  従ってCSV文字列を生成する。CSV生成自体はdocs/design.md §4.2の方針通りpapaparse
+  （`Papa.unparse`）に委ね、区切り文字・改行コードの変換のみ独自ロジックとした
+- `src/useMasterDataAccess.ts`: テーブル定義の読み込み・DAO初期化に続けて連携ファイル定義も
+  読み込むよう拡張（`sourceTableId`/`sourceColumnId`の検証にテーブル定義が必要なため、
+  テーブル定義読み込み完了後に行う順序とした）。`DataAccessGate`は連携ファイル定義エラーも
+  バナー表示するよう拡張
+- `SearchExportScreen.tsx`: 選択中テーブルの`sourceTableId`に一致する連携ファイル定義がある
+  場合のみ「連携ファイル出力」セクションを表示し、定義を選択して現在の検索結果（または全件）を
+  変換出力できるようにした。DO-7（全カラムそのまま、`columnId`ヘッダー）とDO-8（決められた
+  出力カラムのみ、`outputHeader`ヘッダー）を別ボタン・別セクションとして明確に分離した
+- 動作確認（すべて成功）: `npx tsc --noEmit`（エラーなし）→ `npm test`（vitest run、17ファイル
+  97件すべて成功）→ `npm run build`（エラーなし）→ `npm run dev`を起動しPlaywrightで実際に
+  ブラウザ操作して確認：m_item選択時のみ連携ファイル出力セクションが表示される（対応する
+  export定義を持たないm_partnerでは表示されない）／`item_export_v1`を選択して出力したCSVが
+  `ITEM_CD,ITEM_NAME,ITEM_TYPE`ヘッダー・CRLF・`safety_stock`を含まない内容で生成される
+- `logic-reviewer`サブエージェントでレビュー済み（詳細はPR説明を参照）
 
 ---
 

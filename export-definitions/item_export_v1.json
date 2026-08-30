@@ -1,0 +1,16 @@
+{
+  "exportId": "item_export_v1",
+  "exportName": "品目マスタ連携ファイル",
+  "sourceTableId": "m_item",
+  "outputColumns": [
+    { "sourceColumnId": "item_code", "outputHeader": "ITEM_CD" },
+    { "sourceColumnId": "item_name", "outputHeader": "ITEM_NAME" },
+    { "sourceColumnId": "item_type", "outputHeader": "ITEM_TYPE" }
+  ],
+  "fileFormat": {
+    "delimiter": ",",
+    "encoding": "UTF-8",
+    "includeHeader": true,
+    "lineEnding": "CRLF"
+  }
+}
