@@ -14,8 +14,9 @@
 - 連携ファイル出力（`export-definitions/*.json`で定義した出力カラム・ヘッダー名・区切り文字に変換）
 - 取込実行ログ（バッチ単位の成功/失敗件数・エラー明細）
 
-マスタテーブル定義（`public/table-definitions/*.json`）を追加・変更するだけで、コード修正なしに
-新しいテーブルの取込・検索・出力に対応できる（JSON定義駆動アーキテクチャ）。
+マスタテーブル定義JSON（`public/table-definitions/{tableId}.json`）を追加し
+`public/table-definitions/index.json`へ`tableId`を追記するだけで、コード修正なしに新しい
+テーブルの取込・検索・出力に対応できる（JSON定義駆動アーキテクチャ。`docs/design.md` §4.6）。
 
 ## ドキュメント
 
