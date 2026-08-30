@@ -51,6 +51,7 @@ poc_master_data_management_sys/
 │   ├── m_item.json           # 品目マスタ
 │   └── m_partner.json        # 取引先マスタ
 ├── export-definitions/      # 連携ファイル定義JSON（実行時fetch対象、DO-8）
+│   ├── index.json             # 配置済みexportId一覧（design.md §4.6と同じマニフェスト方式）
 │   └── item_export_v1.json
 ├── package.json / tsconfig.json / vite.config.ts / index.html
 ├── .github/workflows/
@@ -64,7 +65,8 @@ poc_master_data_management_sys/
     ├── core/                # ★最重要ディレクトリ（ドメインロジック本体）
     │   ├── schema/            # テーブル定義JSONの型定義・読み込み・定義自体のバリデーション
     │   ├── dao/               # 実行時DAO生成・IndexedDBスキーマ構築（idbベース）
-    │   └── validation/        # バリデーションエンジン（型/NotNull/長さ/定数/ユニーク）
+    │   ├── validation/        # バリデーションエンジン（型/NotNull/長さ/定数/ユニーク）
+    │   └── export/            # 連携ファイル定義の型・読み込み・検証・CSV生成（DO-8）
     ├── workers/
     │   ├── csvImport.worker.ts # 薄いWorkerラッパー（DB接続・メッセージ送受信のみ）
     │   └── importCsvFile.ts    # パース・バリデーション・Upsert登録・取込ログ生成の中核ロジック
@@ -100,16 +102,17 @@ npm run preview       # build成果物をGitHub Pages相当のbaseパスで動�
 
 ## 現在の実装状況
 
-`docs/implementation-plan.md`のPhase 0〜4（プロジェクト初期化／マスタテーブル定義JSON＋実行時
-DAO生成／バリデーションエンジン／CSV取込・Web Worker／画面実装）まで完了。
-`table-definitions/`（index.jsonマニフェスト＋m_item/m_partner）・`src/core/schema/`
-（定義JSONの型・fetch・定義自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・
-汎用DAO・import_logs用DAO）・`src/core/validation/`（型→NotNull→長さ→定数→ユニークの
-5手順バリデーション関数群）・`src/workers/`（CSV取込の中核ロジックと薄いWorkerラッパー）・
-`src/screens/`（SCR-1〜3の3画面）・`src/useMasterDataAccess.ts`/
-`src/MasterDataAccessContext.tsx`（アプリ起動時のDAO初期化とContext共有）を実装済み。
-連携ファイル作成機能（DO-8）は未着手。
-次に着手すべきは`docs/implementation-plan.md`のPhase 5（連携ファイル作成機能）。
+`docs/implementation-plan.md`のPhase 0〜5（プロジェクト初期化／マスタテーブル定義JSON＋実行時
+DAO生成／バリデーションエンジン／CSV取込・Web Worker／画面実装／連携ファイル作成機能）まで完了。
+`table-definitions/`（index.jsonマニフェスト＋m_item/m_partner）・`export-definitions/`
+（index.jsonマニフェスト＋item_export_v1）・`src/core/schema/`（定義JSONの型・fetch・定義
+自体の検証）・`src/core/dao/`（idbベースの動的スキーマ構築・汎用DAO・import_logs用DAO）・
+`src/core/validation/`（型→NotNull→長さ→定数→ユニークの5手順バリデーション関数群）・
+`src/core/export/`（連携ファイル定義の型・読み込み・検証・CSV生成）・`src/workers/`（CSV取込の
+中核ロジックと薄いWorkerラッパー）・`src/screens/`（SCR-1〜3の3画面。SCR-2に連携ファイル出力を
+追加）・`src/useMasterDataAccess.ts`/`src/MasterDataAccessContext.tsx`（アプリ起動時のDAO・
+連携ファイル定義初期化とContext共有）を実装済み。
+次に着手すべきは`docs/implementation-plan.md`のPhase 6（自動テスト整備。EFFECT-1/2シナリオ含む）。
 
 ## 実装時に確認すべき設計判断（要求仕様書「やらない事」の再掲）
 

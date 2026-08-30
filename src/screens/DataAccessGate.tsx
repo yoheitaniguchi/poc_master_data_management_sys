@@ -2,9 +2,16 @@ import type { ReactNode } from 'react'
 import { useMasterDataAccessContext } from '../MasterDataAccessContext'
 import type { MasterDataAccess } from '../core/dao/masterDataAccess'
 import type { DefinitionValidationError } from '../core/schema/validateDefinition'
+import type { ExportDefinition } from '../core/export/types'
+import type { ExportDefinitionValidationError } from '../core/export/validateExportDefinition'
 
 interface DataAccessGateProps {
-  children: (access: MasterDataAccess, definitionErrors: DefinitionValidationError[]) => ReactNode
+  children: (
+    access: MasterDataAccess,
+    definitionErrors: DefinitionValidationError[],
+    exportDefinitions: ExportDefinition[],
+    exportDefinitionErrors: ExportDefinitionValidationError[],
+  ) => ReactNode
 }
 
 // docs/design.md §4.8: アプリ起動時のDBスキーマ構築（table-definitions/*.jsonのfetchと
@@ -44,7 +51,7 @@ export function DataAccessGate({ children }: DataAccessGateProps) {
           </ul>
         </div>
       )}
-      {children(state.access, state.definitionErrors)}
+      {children(state.access, state.definitionErrors, state.exportDefinitions, state.exportDefinitionErrors)}
     </>
   )
 }
