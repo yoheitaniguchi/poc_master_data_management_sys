@@ -159,7 +159,15 @@ function ImportScreenBody({ access }: { access: MasterDataAccess }) {
         </p>
       )}
 
-      {outcome?.kind === 'error' && <p role="alert">取込処理でエラーが発生しました: {outcome.message}</p>}
+      {outcome?.kind === 'error' && (
+        <div role="alert">
+          <p>取込処理でエラーが発生しました: {outcome.message}</p>
+          <p>
+            CSVファイルの文字コード（UTF-8推奨）・ヘッダー行の内容、取込先テーブルの選択が
+            正しいか確認し、再度お試しください。
+          </p>
+        </div>
+      )}
 
       {outcome?.kind === 'result' && <ImportResultSummary log={outcome.log} />}
     </section>
